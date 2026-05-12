@@ -1,0 +1,251 @@
+import { useEffect, useState } from 'react'
+import { getCompanies, updateCompany, logDraft } from '../lib/supabase'
+import { createDraft, requestGmailAccess, isAuthenticated } from '../lib/gmail'
+import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
+import StatusBadge from '../components/StatusBadge'
+import { CompanyAvatar } from './Dashboard'
+
+export default function BatchSender() {
+  const [companies, setCompanies] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState(new Set())
+  const [filter, setFilter] = useState('not_contacted')
+  const [progress, setProgress] = useState(null)
+  const [results, setResults] = useState([])
+  const [running, setRunning] = useState(false)
+
+  useEffect(() => {
+    getCompanies().then(setCompanies).catch(console.error).finally(() => setLoading(false))
+  }, [])
+
+  const eligible = companies.filter(c =>
+    (filter === 'all' ? true : c.status === filter) && c.contacts.length > 0
+  )
+
+  function toggleAll() {
+    setSelected(selected.size === eligible.length
+      ? new Set()
+      : new Set(eligible.map(c => c.id))
+    )
+  }
+
+  function toggle(id) {
+    const next = new Set(selected)
+    next.has(id) ? next.delete(id) : next.add(id)
+    setSelected(next)
+  }
+
+  async function runBatch() {
+    if (selected.size === 0) return
+    if (!confirm(`Create ${selected.size} Gmail draft${selected.size !== 1 ? 's' : ''}? You'll review and send them from Gmail.`)) return
+
+    setRunning(true)
+    setResults([])
+    setProgress({ done: 0, total: selected.size, errors: 0 })
+
+    try {
+      if (!isAuthenticated()) await requestGmailAccess()
+    } catch (e) {
+      alert('Gmail sign-in failed: ' + e.message)
+      setRunning(false)
+      return
+    }
+
+    const batch = companies.filter(c => selected.has(c.id))
+    const { attachmentName } = getSenderInfo()
+    const newResults = []
+
+    for (let i = 0; i < batch.length; i++) {
+      const c = batch[i]
+      try {
+        const toEmails = c.contacts.map(x => x.email).join(', ')
+        const { subject, body } = renderEmail(c.name)
+        const { draftId, draftUrl } = await createDraft({ toEmails, subject, htmlBody: body, attachmentName })
+        await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: getSenderInfo().name })
+        await updateCompany(c.id, { status: 'draft_created', last_contacted_at: new Date().toISOString() })
+        newResults.push({ id: c.id, name: c.name, ok: true, draftUrl })
+        setProgress(p => ({ ...p, done: i + 1 }))
+      } catch (e) {
+        newResults.push({ id: c.id, name: c.name, ok: false, error: e.message })
+        setProgress(p => ({ ...p, done: i + 1, errors: p.errors + 1 }))
+      }
+      setResults([...newResults])
+      if (i < batch.length - 1) await sleep(300)
+    }
+
+    setRunning(false)
+    getCompanies().then(setCompanies)
+    setSelected(new Set())
+  }
+
+  const successCount = results.filter(r => r.ok).length
+  const errorCount = results.filter(r => !r.ok).length
+
+  return (
+    <div className="page">
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Batch Sender</h1>
+          <p className="page-subtitle">
+            Select companies → generate drafts → send from Gmail.
+          </p>
+        </div>
+        {selected.size > 0 && !running && (
+          <button className="btn-primary" onClick={runBatch}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Generate {selected.size} Draft{selected.size !== 1 ? 's' : ''}
+          </button>
+        )}
+        {running && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+            <span className="w-4 h-4 rounded-full border-2 border-baxa-orange border-t-transparent animate-spin" />
+            Creating drafts…
+          </div>
+        )}
+      </div>
+
+      {/* Progress */}
+      {progress && (
+        <div className={`mb-5 card p-5 ${running ? '' : errorCount === 0 ? 'border-emerald-100 bg-emerald-50/30' : 'border-amber-100 bg-amber-50/30'}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="font-semibold text-sm text-gray-800">
+              {running
+                ? `Creating drafts… ${progress.done} of ${progress.total}`
+                : `Done — ${successCount} created${errorCount > 0 ? `, ${errorCount} failed` : ''}`}
+            </div>
+            {!running && (
+              <button className="text-xs text-gray-400 hover:text-gray-600"
+                onClick={() => { setProgress(null); setResults([]) }}>
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full bg-baxa-orange rounded-full transition-all duration-300"
+              style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+          </div>
+          {!running && results.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {results.filter(r => r.ok).map(r => (
+                <a key={r.id} href={r.draftUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {r.name} →
+                </a>
+              ))}
+              {results.filter(r => !r.ok).map(r => (
+                <span key={r.id} title={r.error}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 px-2.5 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  {r.name} ✗
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 mb-4">
+        <select className="input max-w-[190px]" value={filter}
+          onChange={e => { setFilter(e.target.value); setSelected(new Set()) }}>
+          <option value="not_contacted">Not Contacted</option>
+          <option value="draft_created">Draft Created</option>
+          <option value="sent">Sent</option>
+          <option value="all">All (with contacts)</option>
+        </select>
+        <span className="text-sm text-gray-400">{eligible.length} eligible</span>
+        <div className="ml-auto">
+          <button className="btn-secondary text-xs" onClick={toggleAll}>
+            {selected.size === eligible.length && eligible.length > 0 ? 'Deselect All' : `Select All (${eligible.length})`}
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading…</div>
+      ) : (
+        <div className="card overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="table-head">
+                <th className="w-12 text-center">
+                  <input type="checkbox"
+                    checked={selected.size === eligible.length && eligible.length > 0}
+                    onChange={toggleAll}
+                    className="rounded" />
+                </th>
+                <th>Company</th>
+                <th>Contacts</th>
+                <th>Status</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {eligible.map(c => {
+                const result = results.find(r => r.id === c.id)
+                const isSelected = selected.has(c.id)
+                return (
+                  <tr key={c.id}
+                    className={`table-row ${isSelected ? 'bg-orange-50/40' : ''}`}
+                    onClick={() => toggle(c.id)}>
+                    <td className="table-cell text-center" onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" checked={isSelected} onChange={() => toggle(c.id)} className="rounded" />
+                    </td>
+                    <td className="table-cell">
+                      <div className="flex items-center gap-3">
+                        <CompanyAvatar name={c.name} />
+                        <span className="font-semibold text-gray-800">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="table-cell text-gray-500">{c.contacts.length}</td>
+                    <td className="table-cell">
+                      <StatusBadge status={c.status} />
+                    </td>
+                    <td className="table-cell">
+                      {result ? (
+                        result.ok ? (
+                          <a href={result.draftUrl} target="_blank" rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline underline-offset-2">
+                            ✓ Draft ready →
+                          </a>
+                        ) : (
+                          <span className="text-xs text-red-500 font-medium" title={result.error}>
+                            ✗ Failed
+                          </span>
+                        )
+                      ) : null}
+                    </td>
+                  </tr>
+                )
+              })}
+              {eligible.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-16 text-center text-gray-400 text-sm">
+                    No companies match this filter, or all are missing contacts.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="mt-4 text-xs text-gray-400">
+        After generating, go to{' '}
+        <a href="https://mail.google.com/mail/#drafts" target="_blank" rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-gray-500">
+          Gmail Drafts
+        </a>{' '}
+        to review and send. Drafts are created 300ms apart to stay within rate limits.
+      </p>
+    </div>
+  )
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
