@@ -14,8 +14,9 @@ export default function CompanyDetail() {
   const [notes, setNotes] = useState('')
   const [status, setStatus] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  const [newContactName, setNewContactName] = useState('')
   const [drafting, setDrafting] = useState(false)
-  const [draftResult, setDraftResult] = useState(null)
+  const [draftResults, setDraftResults] = useState([])
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(false)
 
@@ -47,8 +48,9 @@ export default function CompanyDetail() {
     e.preventDefault()
     if (!newEmail.trim()) return
     try {
-      await addContact(id, newEmail.trim())
+      await addContact(id, newEmail.trim(), newContactName.trim() || null)
       setNewEmail('')
+      setNewContactName('')
       await reload()
     } catch (e) { setError(e.message) }
   }
@@ -62,17 +64,26 @@ export default function CompanyDetail() {
   async function handleCreateDraft() {
     setDrafting(true)
     setError(null)
-    setDraftResult(null)
+    setDraftResults([])
     try {
       if (!isAuthenticated()) await requestGmailAccess()
-      const toEmails = company.contacts.map(c => c.email).join(', ')
-      const { subject, body } = renderEmail(company.name)
-      const { attachmentName } = getSenderInfo()
-      const { draftId, draftUrl } = await createDraft({ toEmails, subject, htmlBody: body, attachmentName })
-      await logDraft(id, { gmailDraftId: draftId, subject, sentBy: getSenderInfo().name })
+      const { attachmentName, name: senderName } = getSenderInfo()
+      const results = []
+      // One draft per contact
+      for (const contact of company.contacts) {
+        const { subject, body } = renderEmail(company.name, contact.name, contact.email)
+        const { draftId, draftUrl } = await createDraft({
+          toEmails: contact.email,
+          subject,
+          htmlBody: body,
+          attachmentName,
+        })
+        await logDraft(id, { gmailDraftId: draftId, subject, sentBy: senderName })
+        results.push({ email: contact.email, name: contact.name, draftUrl })
+      }
       await updateCompany(id, { status: 'draft_created' })
       setStatus('draft_created')
-      setDraftResult({ draftId, draftUrl })
+      setDraftResults(results)
       await reload()
     } catch (e) { setError(e.message) }
     finally { setDrafting(false) }
@@ -88,7 +99,9 @@ export default function CompanyDetail() {
     <div className="page"><p className="text-red-500 text-sm">Company not found.</p></div>
   )
 
-  const { subject, body } = renderEmail(company.name)
+  // Preview uses first contact's name if available
+  const previewContact = company.contacts[0] ?? null
+  const { subject, body } = renderEmail(company.name, previewContact?.name, previewContact?.email)
 
   return (
     <div className="page">
@@ -134,19 +147,20 @@ export default function CompanyDetail() {
               <div>
                 <h2 className="font-semibold text-sm text-baxa-ink">Email Preview</h2>
                 <p className="text-[11px] text-black/35 mt-0.5">
-                  To: {company.contacts.length > 0
-                    ? company.contacts.map(c => c.email).join(', ')
+                  {company.contacts.length > 0
+                    ? `${company.contacts.length} draft${company.contacts.length !== 1 ? 's' : ''} will be created — one per contact`
                     : <span className="text-red-400">No contacts yet</span>}
                 </p>
               </div>
-              {draftResult ? (
-                <a href={draftResult.draftUrl} target="_blank" rel="noopener noreferrer"
-                  className="btn-primary text-xs gap-1.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                  Open Draft in Gmail
-                </a>
+              {draftResults.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {draftResults.map(r => (
+                    <a key={r.email} href={r.draftUrl} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-baxa-ink bg-baxa-cream border border-black/[0.08] px-2.5 py-1 rounded-full hover:bg-baxa-cream-2 transition-colors">
+                      {r.name ? r.name.split(' ')[0] : r.email.split('@')[0]} →
+                    </a>
+                  ))}
+                </div>
               ) : (
                 <button className="btn-primary text-xs" onClick={handleCreateDraft}
                   disabled={drafting || company.contacts.length === 0}
@@ -156,7 +170,7 @@ export default function CompanyDetail() {
                   ) : (
                     <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                    </svg> Create Gmail Draft</>
+                    </svg> Create Drafts</>
                   )}
                 </button>
               )}
@@ -181,14 +195,17 @@ export default function CompanyDetail() {
             <ul className="divide-y divide-black/[0.04]">
               {company.contacts.map(c => (
                 <li key={c.id} className="flex items-center gap-3 px-5 py-3 group">
-                  <div className="w-7 h-7 rounded-lg bg-baxa-orange/8 border border-baxa-orange/10 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-baxa-orange/[0.08] border border-baxa-orange/10 flex items-center justify-center shrink-0">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#BF5700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                     </svg>
                   </div>
-                  <span className="text-sm text-baxa-ink/80 flex-1">{c.email}</span>
+                  <div className="flex-1 min-w-0">
+                    {c.name && <div className="text-xs font-semibold text-baxa-ink truncate">{c.name}</div>}
+                    <div className="text-sm text-baxa-ink/60 truncate">{c.email}</div>
+                  </div>
                   <button onClick={() => handleDeleteContact(c.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-black/20 hover:text-red-400">
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-black/20 hover:text-red-400 shrink-0">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
@@ -201,7 +218,9 @@ export default function CompanyDetail() {
             </ul>
             <form onSubmit={handleAddContact}
               className="flex gap-2 px-5 py-3 border-t border-black/[0.06] bg-baxa-cream/30">
-              <input className="input text-sm" placeholder="Add email address…"
+              <input className="input text-sm" placeholder="First Last (optional)"
+                value={newContactName} onChange={e => setNewContactName(e.target.value)} />
+              <input className="input text-sm" placeholder="email@company.com"
                 value={newEmail} onChange={e => setNewEmail(e.target.value)} type="email" />
               <button type="submit" className="btn-secondary text-xs whitespace-nowrap shrink-0">
                 + Add

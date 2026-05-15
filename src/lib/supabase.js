@@ -11,7 +11,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // ── Companies ─────────────────────────────────────────────────────────────────
 
-export async function addCompany(name, emails = []) {
+export async function addCompany(name, contacts = []) {
   const { data: company, error } = await supabase
     .from('companies')
     .insert({ name: name.trim() })
@@ -19,8 +19,12 @@ export async function addCompany(name, emails = []) {
     .single()
   if (error) throw error
 
-  if (emails.length > 0) {
-    const rows = emails.map(email => ({ company_id: company.id, email: email.trim() }))
+  if (contacts.length > 0) {
+    const rows = contacts.map(c => ({
+      company_id: company.id,
+      email: (typeof c === 'string' ? c : c.email).trim(),
+      name: typeof c === 'string' ? null : (c.name?.trim() || null),
+    }))
     const { error: contactError } = await supabase.from('contacts').insert(rows)
     if (contactError) throw contactError
   }

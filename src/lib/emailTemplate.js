@@ -7,7 +7,7 @@
 
 export const DEFAULT_SUBJECT = 'BAXA x {{companyName}} — Partnership Opportunity'
 
-export const DEFAULT_TEMPLATE = `<p>Hi,</p>
+export const DEFAULT_TEMPLATE = `<p>Hi {{contactName}},</p>
 
 <p>I hope you're having a great day! My name is {{yourName}}, and I'm the Corporate Director of the Business Analytics Association (BAXA) at UT Austin. We're a 200+ member student org focused on data, technology, and business, and we're currently seeking industry partners for the 2026–2027 year.</p>
 
@@ -60,14 +60,33 @@ export function saveSenderInfo({ name, title, attachmentName }) {
 }
 
 /**
- * Render the template for a specific company.
- * Replaces {{companyName}}, {{yourName}}, {{yourTitle}}.
+ * Extract a capitalized first name from an email address.
+ * e.g. "natalie.seal@capitalone.com" → "Natalie"
+ *      "john_smith@company.com"      → "John"
  */
-export function renderEmail(companyName, overrides = {}) {
+function extractFirstNameFromEmail(email) {
+  const local = email.split('@')[0]
+  const first = local.split(/[._\-+]/)[0]
+  if (!first) return 'there'
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase()
+}
+
+/**
+ * Render the template for a specific company.
+ * Replaces {{companyName}}, {{contactName}}, {{yourName}}, {{yourTitle}}.
+ * Name priority: stored contact name → extracted from email → "there"
+ */
+export function renderEmail(companyName, contactName = null, contactEmail = null, overrides = {}) {
   const { name, title } = { ...getSenderInfo(), ...overrides }
   const subject = getSubjectLine().replace('{{companyName}}', companyName)
+  const firstName = contactName
+    ? contactName.trim().split(' ')[0]
+    : contactEmail
+      ? extractFirstNameFromEmail(contactEmail)
+      : 'there'
   const body = getTemplate()
     .replace(/\{\{companyName\}\}/g, companyName)
+    .replace(/\{\{contactName\}\}/g, firstName)
     .replace(/\{\{yourName\}\}/g, name)
     .replace(/\{\{yourTitle\}\}/g, title)
   return { subject, body }

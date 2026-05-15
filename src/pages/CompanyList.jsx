@@ -158,25 +158,27 @@ export default function CompanyList() {
 function AddCompanyModal({ onClose, onAdded }) {
   const navigate = useNavigate()
   const [name, setName] = useState('')
+  const [contactName, setContactName] = useState('')
   const [emailInput, setEmailInput] = useState('')
-  const [emails, setEmails] = useState([])
+  const [contacts, setContacts] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  function addEmail() {
-    const trimmed = emailInput.trim()
-    if (!trimmed) return
-    const parts = trimmed.split(/[\n,]+/).map(e => e.trim()).filter(Boolean)
-    setEmails(prev => [...new Set([...prev, ...parts])])
+  function addContact() {
+    const email = emailInput.trim()
+    if (!email) return
+    if (contacts.find(c => c.email === email)) { setEmailInput(''); return }
+    setContacts(prev => [...prev, { email, name: contactName.trim() || null }])
     setEmailInput('')
+    setContactName('')
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter') { e.preventDefault(); addEmail() }
+    if (e.key === 'Enter') { e.preventDefault(); addContact() }
   }
 
-  function removeEmail(email) {
-    setEmails(prev => prev.filter(e => e !== email))
+  function removeContact(email) {
+    setContacts(prev => prev.filter(c => c.email !== email))
   }
 
   async function handleSubmit(e) {
@@ -185,10 +187,10 @@ function AddCompanyModal({ onClose, onAdded }) {
     setSaving(true)
     setError(null)
     try {
-      const finalEmails = emailInput.trim()
-        ? [...new Set([...emails, ...emailInput.split(/[\n,]+/).map(e => e.trim()).filter(Boolean)])]
-        : emails
-      const company = await addCompany(name.trim(), finalEmails)
+      const finalContacts = emailInput.trim()
+        ? [...contacts, { email: emailInput.trim(), name: contactName.trim() || null }]
+        : contacts
+      const company = await addCompany(name.trim(), finalContacts)
       onAdded(company)
       navigate(`/companies/${company.id}`)
     } catch (e) {
@@ -224,45 +226,40 @@ function AddCompanyModal({ onClose, onAdded }) {
 
           <div>
             <label className="label">Company Name *</label>
-            <input
-              className="input"
-              placeholder="e.g. Salesforce"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              autoFocus
-            />
+            <input className="input" placeholder="e.g. Salesforce"
+              value={name} onChange={e => setName(e.target.value)} autoFocus />
           </div>
 
           <div>
-            <label className="label">Contact Emails</label>
-            <div className="flex gap-2">
-              <input
-                className="input"
-                placeholder="email@company.com"
-                value={emailInput}
-                onChange={e => setEmailInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-              <button type="button" className="btn-secondary whitespace-nowrap shrink-0" onClick={addEmail}>
+            <label className="label">Add Contact</label>
+            <div className="flex gap-2 mb-2">
+              <input className="input" placeholder="First Last"
+                value={contactName} onChange={e => setContactName(e.target.value)}
+                onKeyDown={handleKeyDown} />
+              <input className="input" placeholder="email@company.com" type="email"
+                value={emailInput} onChange={e => setEmailInput(e.target.value)}
+                onKeyDown={handleKeyDown} />
+              <button type="button" className="btn-secondary whitespace-nowrap shrink-0" onClick={addContact}>
                 Add
               </button>
             </div>
-            <p className="text-[11px] text-black/30 mt-1.5">
-              Press Enter after each email, or paste multiple separated by commas.
-            </p>
+            <p className="text-[11px] text-black/30">Name is optional but enables personalized greetings.</p>
 
-            {emails.length > 0 && (
+            {contacts.length > 0 && (
               <ul className="mt-2.5 space-y-1.5">
-                {emails.map(email => (
-                  <li key={email} className="flex items-center gap-2 bg-baxa-cream/60 border border-black/[0.06] rounded-xl px-3 py-2 text-sm">
+                {contacts.map(c => (
+                  <li key={c.email} className="flex items-center gap-2 bg-baxa-cream/60 border border-black/[0.06] rounded-xl px-3 py-2">
                     <div className="w-5 h-5 rounded-md bg-baxa-orange/10 flex items-center justify-center shrink-0">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#BF5700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                       </svg>
                     </div>
-                    <span className="flex-1 text-baxa-ink/70 text-xs">{email}</span>
-                    <button type="button" onClick={() => removeEmail(email)}
-                      className="text-black/20 hover:text-red-400 transition-colors ml-1">
+                    <div className="flex-1 min-w-0">
+                      {c.name && <div className="text-xs font-semibold text-baxa-ink truncate">{c.name}</div>}
+                      <div className="text-xs text-black/40 truncate">{c.email}</div>
+                    </div>
+                    <button type="button" onClick={() => removeContact(c.email)}
+                      className="text-black/20 hover:text-red-400 transition-colors ml-1 shrink-0">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                       </svg>
@@ -274,9 +271,7 @@ function AddCompanyModal({ onClose, onAdded }) {
           </div>
 
           <div className="flex gap-2.5 pt-1">
-            <button type="button" className="btn-secondary flex-1 justify-center" onClick={onClose}>
-              Cancel
-            </button>
+            <button type="button" className="btn-secondary flex-1 justify-center" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary flex-1 justify-center" disabled={saving}>
               {saving ? 'Adding…' : 'Add Company'}
             </button>

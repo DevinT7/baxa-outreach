@@ -52,25 +52,32 @@ export default function BatchSender() {
     }
 
     const batch = companies.filter(c => selected.has(c.id))
-    const { attachmentName } = getSenderInfo()
+    const { attachmentName, name: senderName } = getSenderInfo()
     const newResults = []
 
     for (let i = 0; i < batch.length; i++) {
       const c = batch[i]
       try {
-        const toEmails = c.contacts.map(x => x.email).join(', ')
-        const { subject, body } = renderEmail(c.name)
-        const { draftId, draftUrl } = await createDraft({ toEmails, subject, htmlBody: body, attachmentName })
-        await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: getSenderInfo().name })
+        // One draft per contact, personalized with their name
+        for (const contact of c.contacts) {
+          const { subject, body } = renderEmail(c.name, contact.name, contact.email)
+          const { draftId, draftUrl } = await createDraft({
+            toEmails: contact.email,
+            subject,
+            htmlBody: body,
+            attachmentName,
+          })
+          await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: senderName })
+          await sleep(300)
+        }
         await updateCompany(c.id, { status: 'draft_created', last_contacted_at: new Date().toISOString() })
-        newResults.push({ id: c.id, name: c.name, ok: true, draftUrl })
+        newResults.push({ id: c.id, name: c.name, ok: true, count: c.contacts.length })
         setProgress(p => ({ ...p, done: i + 1 }))
       } catch (e) {
         newResults.push({ id: c.id, name: c.name, ok: false, error: e.message })
         setProgress(p => ({ ...p, done: i + 1, errors: p.errors + 1 }))
       }
       setResults([...newResults])
-      if (i < batch.length - 1) await sleep(300)
     }
 
     setRunning(false)
@@ -131,11 +138,11 @@ export default function BatchSender() {
           {!running && results.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {results.filter(r => r.ok).map(r => (
-                <a key={r.id} href={r.draftUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors">
+                <span key={r.id}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  {r.name} →
-                </a>
+                  {r.name} · {r.count} draft{r.count !== 1 ? 's' : ''} ✓
+                </span>
               ))}
               {results.filter(r => !r.ok).map(r => (
                 <span key={r.id} title={r.error}
