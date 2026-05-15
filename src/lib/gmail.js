@@ -123,13 +123,18 @@ function buildMimeMessage({ to, subject, htmlBody, attachmentBase64, attachmentN
 let _attachmentCache = null
 
 /**
- * Fetches the Engagement Guide PDF from /public and returns it as a base64 string.
- * Result is cached so subsequent calls are instant.
+ * Fetches the Engagement Guide PDF from Supabase Storage and returns it as a base64 string.
+ * Falls back to /Engagement Guide.pdf (local public folder) if the env var is missing.
+ * Result is cached so batch sends don't re-fetch on every draft.
  */
 export async function getEngagementGuideBase64() {
   if (_attachmentCache) return _attachmentCache
-  const res = await fetch('/Engagement Guide.pdf')
-  if (!res.ok) throw new Error('Could not load Engagement Guide.pdf — make sure it is in the public/ folder.')
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const url = supabaseUrl
+    ? `${supabaseUrl}/storage/v1/object/public/assets/Engagement%20Guide.pdf`
+    : '/Engagement Guide.pdf'
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Could not load Engagement Guide (${res.status}). Make sure it is uploaded to the Supabase "assets" bucket.`)
   const buffer = await res.arrayBuffer()
   const bytes = new Uint8Array(buffer)
   let binary = ''
