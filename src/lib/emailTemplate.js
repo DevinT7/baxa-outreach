@@ -7,22 +7,19 @@
 
 export const DEFAULT_SUBJECT = 'BAXA x {{companyName}} — Partnership Opportunity'
 
-export const DEFAULT_TEMPLATE = `<p>Hello,</p>
+export const DEFAULT_TEMPLATE = `<p>Hi,</p>
 
-<p>I hope this message finds you well. My name is {{yourName}}, and I'm reaching out on behalf of the Business Analytics Association (BAXA) at UT Austin. BAXA is a student-led organization of 100+ members passionate about data, technology, and business. We are reaching out to establish a professional connection between BAXA and <strong>{{companyName}}</strong>. Below we have outlined the benefits of collaborating with our student organization as well as potential opportunities.</p>
+<p>I hope you're having a great day! My name is {{yourName}}, and I'm the Corporate Director of the Business Analytics Association (BAXA) at UT Austin. We're a 200+ member student org focused on data, technology, and business, and we're currently seeking industry partners for the 2026–2027 year.</p>
 
-<p><strong>Why partner with BAXA?</strong><br>
-BAXA is the only business analytics organization on campus, supported by McCombs' Center for Analytics and Supply Chain Management Center. Our interdisciplinary members come from Business Analytics, Computer Science, Statistics &amp; Data Science, Management Information Systems, and Economics. BAXA alumni have gone on to work at Meta, Dell, Wells Fargo, BCG, and more, equipped with real-world experience from our case competitions, technical workshops, and networking events.</p>
+<p>We'd love to explore a partnership with {{companyName}}. Our members are highly engaged students from Business Analytics, CS, Statistics, and MIS — many of whom are actively recruiting. Past sponsors have connected with our talent through info sessions, case competitions, and workshops.</p>
 
-<p><strong>How we can collaborate</strong><br>
-We've attached our Engagement Guide, which outlines ways to engage with BAXA from event sponsorships to talent development initiatives. We'd love to explore how we can support your goals and would be happy to set up a meeting at your convenience.</p>
+<p>I've attached our Engagement Guide with sponsorship details. Would you be open to a quick call to discuss?</p>
 
 <p>Thanks,<br>
 <strong>{{yourName}}</strong><br>
 {{yourTitle}}<br>
-The University of Texas at Austin | McCombs School of Business<br>
-<a href="https://txbaxa.web.app/">https://txbaxa.web.app/</a><br>
-texasbaxassociation@gmail.com</p>`
+Business Analytics Association · UT Austin<br>
+<a href="https://txbaxa.web.app/">txbaxa.web.app</a> · texasbaxassociation@gmail.com</p>`
 
 const STORAGE_KEYS = {
   template: 'baxa_email_template',
