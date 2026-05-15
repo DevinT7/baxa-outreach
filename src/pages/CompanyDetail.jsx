@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getCompany, updateCompany, addContact, deleteContact, logDraft } from '../lib/supabase'
-import { createDraft, requestGmailAccess, isAuthenticated } from '../lib/gmail'
+import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
 import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge, { STATUS_OPTIONS } from '../components/StatusBadge'
 import { CompanyAvatar } from './Dashboard'
@@ -68,6 +68,7 @@ export default function CompanyDetail() {
     try {
       if (!isAuthenticated()) await requestGmailAccess()
       const { attachmentName, name: senderName } = getSenderInfo()
+      const attachmentBase64 = await getEngagementGuideBase64()
       const results = []
       // One draft per contact
       for (const contact of company.contacts) {
@@ -76,6 +77,7 @@ export default function CompanyDetail() {
           toEmails: contact.email,
           subject,
           htmlBody: body,
+          attachmentBase64,
           attachmentName,
         })
         await logDraft(id, { gmailDraftId: draftId, subject, sentBy: senderName })

@@ -118,6 +118,26 @@ function buildMimeMessage({ to, subject, htmlBody, attachmentBase64, attachmentN
     .replace(/=+$/, '')
 }
 
+// ── Attachment helper ─────────────────────────────────────────────────────────
+
+let _attachmentCache = null
+
+/**
+ * Fetches the Engagement Guide PDF from /public and returns it as a base64 string.
+ * Result is cached so subsequent calls are instant.
+ */
+export async function getEngagementGuideBase64() {
+  if (_attachmentCache) return _attachmentCache
+  const res = await fetch('/Engagement Guide.pdf')
+  if (!res.ok) throw new Error('Could not load Engagement Guide.pdf — make sure it is in the public/ folder.')
+  const buffer = await res.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+  _attachmentCache = btoa(binary)
+  return _attachmentCache
+}
+
 // ── Draft creation ────────────────────────────────────────────────────────────
 
 /**

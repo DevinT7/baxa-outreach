@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCompanies, updateCompany, logDraft } from '../lib/supabase'
-import { createDraft, requestGmailAccess, isAuthenticated } from '../lib/gmail'
+import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
 import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge from '../components/StatusBadge'
 import { CompanyAvatar } from './Dashboard'
@@ -53,6 +53,7 @@ export default function BatchSender() {
 
     const batch = companies.filter(c => selected.has(c.id))
     const { attachmentName, name: senderName } = getSenderInfo()
+    const attachmentBase64 = await getEngagementGuideBase64()
     const newResults = []
 
     for (let i = 0; i < batch.length; i++) {
@@ -65,6 +66,7 @@ export default function BatchSender() {
             toEmails: contact.email,
             subject,
             htmlBody: body,
+            attachmentBase64,
             attachmentName,
           })
           await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: senderName })
