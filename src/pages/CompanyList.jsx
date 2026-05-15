@@ -33,33 +33,33 @@ export default function CompanyList() {
   }
 
   return (
-    <div className="page">
-      {/* Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Companies</h1>
-          <p className="page-subtitle">{filtered.length} of {companies.length} shown</p>
+    <div>
+      <div className="max-w-5xl mx-auto px-8 pt-10 pb-6">
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <div className="text-[10px] font-semibold tracking-widest text-black/30 uppercase mb-2">Sponsorship Pipeline</div>
+            <h1 className="font-serif italic text-4xl text-baxa-ink leading-tight">Companies</h1>
+            <p className="text-sm text-black/35 mt-1">{filtered.length} of {companies.length} shown</p>
+          </div>
+          <div className="flex gap-2 mt-1">
+            <button className="btn-secondary" onClick={() => setShowModal(true)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Company
+            </button>
+            <Link to="/batch" className="btn-orange">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              Batch Send
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-secondary" onClick={() => setShowModal(true)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Add Company
-          </button>
-          <Link to="/batch" className="btn-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-            Batch Send
-          </Link>
-        </div>
-      </div>
-
       {/* Search + filter bar */}
       <div className="flex gap-2.5 mb-5">
         <div className="relative flex-1 max-w-xs">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-black/30" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input
@@ -83,7 +83,7 @@ export default function CompanyList() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48 text-black/30 text-sm">Loading…</div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full">
@@ -102,12 +102,12 @@ export default function CompanyList() {
                   <td className="table-cell">
                     <div className="flex items-center gap-3">
                       <CompanyAvatar name={c.name} />
-                      <span className="font-semibold text-gray-800">{c.name}</span>
+                      <span className="font-semibold text-baxa-ink">{c.name}</span>
                     </div>
                   </td>
                   <td className="table-cell">
                     {c.contacts?.length > 0 ? (
-                      <span className="text-gray-500">
+                      <span className="text-black/40">
                         {c.contacts.length} email{c.contacts.length !== 1 ? 's' : ''}
                       </span>
                     ) : (
@@ -123,10 +123,10 @@ export default function CompanyList() {
                     <StatusBadge status={c.status} />
                   </td>
                   <td className="table-cell max-w-[200px]">
-                    <span className="text-gray-400 text-xs truncate block">{c.notes || '—'}</span>
+                    <span className="text-black/30 text-xs truncate block">{c.notes || '—'}</span>
                   </td>
                   <td className="table-cell text-right">
-                    <svg className="text-gray-300 inline" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg className="text-black/15 inline" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="9 18 15 12 9 6"/>
                     </svg>
                   </td>
@@ -134,7 +134,7 @@ export default function CompanyList() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-gray-400 text-sm">
+                  <td colSpan={5} className="py-16 text-center text-black/30 text-sm">
                     No companies match your filters.
                   </td>
                 </tr>
@@ -150,6 +150,7 @@ export default function CompanyList() {
           onAdded={handleCompanyAdded}
         />
       )}
+      </div>
     </div>
   )
 }
@@ -204,10 +205,10 @@ function AddCompanyModal({ onClose, onAdded }) {
         onClick={e => e.stopPropagation()}>
 
         {/* Modal header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b border-black/[0.06]">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Add New Company</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Add a company and its contacts to the outreach list.</p>
+            <h2 className="text-base font-bold text-baxa-ink">Add New Company</h2>
+            <p className="text-xs text-black/35 mt-0.5">Add a company and its contacts to the outreach list.</p>
           </div>
           <button onClick={onClose} className="btn-ghost w-8 h-8 !px-0 justify-center rounded-lg">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -246,22 +247,22 @@ function AddCompanyModal({ onClose, onAdded }) {
                 Add
               </button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-1.5">
+            <p className="text-[11px] text-black/30 mt-1.5">
               Press Enter after each email, or paste multiple separated by commas.
             </p>
 
             {emails.length > 0 && (
               <ul className="mt-2.5 space-y-1.5">
                 {emails.map(email => (
-                  <li key={email} className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm">
+                  <li key={email} className="flex items-center gap-2 bg-baxa-cream/60 border border-black/[0.06] rounded-xl px-3 py-2 text-sm">
                     <div className="w-5 h-5 rounded-md bg-baxa-orange/10 flex items-center justify-center shrink-0">
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#BF5700" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                       </svg>
                     </div>
-                    <span className="flex-1 text-gray-700 text-xs">{email}</span>
+                    <span className="flex-1 text-baxa-ink/70 text-xs">{email}</span>
                     <button type="button" onClick={() => removeEmail(email)}
-                      className="text-gray-300 hover:text-red-400 transition-colors ml-1">
+                      className="text-black/20 hover:text-red-400 transition-colors ml-1">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                       </svg>

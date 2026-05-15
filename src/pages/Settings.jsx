@@ -9,9 +9,9 @@ import {
 function Section({ title, description, children }) {
   return (
     <div className="card overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
-        <h2 className="font-semibold text-sm text-gray-800">{title}</h2>
-        {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+      <div className="px-6 py-5 border-b border-black/[0.06] bg-baxa-cream/40">
+        <h2 className="font-semibold text-sm text-baxa-ink">{title}</h2>
+        {description && <p className="text-xs text-black/35 mt-0.5">{description}</p>}
       </div>
       <div className="px-6 py-5 space-y-4">{children}</div>
     </div>
@@ -47,20 +47,24 @@ export default function Settings() {
     : null
 
   return (
-    <div className="page max-w-3xl">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle">Configure your sender info and email template.</p>
+    <div>
+      <div className="max-w-3xl mx-auto px-8 pt-10 pb-6">
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <div className="text-[10px] font-semibold tracking-widest text-black/30 uppercase mb-2">Configuration</div>
+            <h1 className="font-serif italic text-4xl text-baxa-ink leading-tight">Settings</h1>
+            <p className="text-sm text-black/35 mt-1">Configure your sender info and email template.</p>
+          </div>
+          <div className="mt-1">
+            <button className="btn-orange" onClick={handleSave}>
+              {saved ? (
+                <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg> Saved!</>
+              ) : 'Save Settings'}
+            </button>
+          </div>
         </div>
-        <button className="btn-primary" onClick={handleSave}>
-          {saved ? (
-            <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg> Saved!</>
-          ) : 'Save Settings'}
-        </button>
-      </div>
 
       <div className="space-y-5">
         {/* Sender info */}
@@ -82,8 +86,8 @@ export default function Settings() {
             <input className="input" value={pdfName}
               onChange={e => setPdfName(e.target.value)}
               placeholder="BAXA Engagement Guide.pdf" />
-            <p className="text-xs text-gray-400 mt-1.5">
-              The name shown in the email attachment. Note: to actually attach the PDF, upload it to Supabase Storage and update the sending logic in <code className="bg-gray-100 px-1 rounded">gmail.js</code>.
+            <p className="text-xs text-black/35 mt-1.5">
+              The name shown in the email attachment. Note: to actually attach the PDF, upload it to Supabase Storage and update the sending logic in <code className="bg-black/[0.05] px-1 rounded">gmail.js</code>.
             </p>
           </div>
         </Section>
@@ -95,8 +99,8 @@ export default function Settings() {
           <div>
             <label className="label">Subject Line</label>
             <input className="input" value={subject} onChange={e => setSubject(e.target.value)} />
-            <p className="text-[11px] text-gray-400 mt-1.5">
-              Use <code className="bg-gray-100 px-1 rounded text-[11px]">{'{{companyName}}'}</code> as a placeholder for the company name.
+            <p className="text-[11px] text-black/35 mt-1.5">
+              Use <code className="bg-black/[0.05] px-1 rounded text-[11px]">{'{{companyName}}'}</code> as a placeholder for the company name.
             </p>
           </div>
 
@@ -115,23 +119,23 @@ export default function Settings() {
                     </svg> Preview</>
                   )}
                 </button>
-                <button className="btn-ghost text-xs py-1 px-2 text-gray-400" onClick={resetDefaults}>
+                <button className="btn-ghost text-xs py-1 px-2 text-black/35" onClick={resetDefaults}>
                   Reset default
                 </button>
               </div>
             </div>
 
             {preview ? (
-              <div className="border border-gray-200 rounded-xl p-5 text-sm bg-white min-h-[280px] text-gray-700"
+              <div className="border border-black/10 rounded-xl p-5 text-sm bg-white min-h-[280px] text-baxa-ink/80"
                 dangerouslySetInnerHTML={{ __html: previewHtml }} />
             ) : (
               <textarea className="input font-mono text-xs min-h-[280px] resize-y leading-relaxed"
                 value={template} onChange={e => setTemplate(e.target.value)} />
             )}
-            <p className="text-[11px] text-gray-400 mt-1.5">
+            <p className="text-[11px] text-black/35 mt-1.5">
               Placeholders:{' '}
               {['{{companyName}}', '{{yourName}}', '{{yourTitle}}'].map(p => (
-                <code key={p} className="bg-gray-100 px-1 rounded text-[11px] mr-1">{p}</code>
+                <code key={p} className="bg-black/[0.05] px-1 rounded text-[11px] mr-1">{p}</code>
               ))}
             </p>
           </div>
@@ -143,6 +147,7 @@ export default function Settings() {
         <button className="btn-primary px-8" onClick={handleSave}>
           {saved ? '✓ Settings Saved' : 'Save Settings'}
         </button>
+      </div>
       </div>
     </div>
   )

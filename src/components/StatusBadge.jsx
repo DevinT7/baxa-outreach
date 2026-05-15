@@ -1,13 +1,13 @@
 const CONFIG = {
   not_contacted: {
     label: 'Not Contacted',
-    dot: 'bg-gray-300',
-    className: 'bg-gray-100 text-gray-500 border-gray-200',
+    dot: 'bg-black/20',
+    className: 'bg-black/[0.04] text-black/40 border-black/[0.06]',
   },
   draft_created: {
     label: 'Draft Created',
-    dot: 'bg-blue-400',
-    className: 'bg-blue-50 text-blue-600 border-blue-100',
+    dot: 'bg-baxa-ink/40',
+    className: 'bg-baxa-ink/5 text-baxa-ink/60 border-baxa-ink/10',
   },
   sent: {
     label: 'Sent',

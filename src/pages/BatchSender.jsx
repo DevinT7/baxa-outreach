@@ -82,48 +82,49 @@ export default function BatchSender() {
   const errorCount = results.filter(r => !r.ok).length
 
   return (
-    <div className="page">
-      {/* Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Batch Sender</h1>
-          <p className="page-subtitle">
-            Select companies → generate drafts → send from Gmail.
-          </p>
-        </div>
-        {selected.size > 0 && !running && (
-          <button className="btn-primary" onClick={runBatch}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-            Generate {selected.size} Draft{selected.size !== 1 ? 's' : ''}
-          </button>
-        )}
-        {running && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-            <span className="w-4 h-4 rounded-full border-2 border-baxa-orange border-t-transparent animate-spin" />
-            Creating drafts…
+    <div>
+      <div className="max-w-5xl mx-auto px-8 pt-10 pb-6">
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <div className="text-[10px] font-semibold tracking-widest text-black/30 uppercase mb-2">Gmail Integration</div>
+            <h1 className="font-serif italic text-4xl text-baxa-ink leading-tight">Batch Sender</h1>
+            <p className="text-sm text-black/35 mt-1">Select companies → generate drafts → send from Gmail.</p>
           </div>
-        )}
-      </div>
+          <div className="mt-1">
+            {selected.size > 0 && !running && (
+              <button className="btn-orange" onClick={runBatch}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+                Generate {selected.size} Draft{selected.size !== 1 ? 's' : ''}
+              </button>
+            )}
+            {running && (
+              <div className="flex items-center gap-2 text-sm text-black/40 font-medium">
+                <span className="w-4 h-4 rounded-full border-2 border-baxa-orange border-t-transparent animate-spin" />
+                Creating drafts…
+              </div>
+            )}
+          </div>
+        </div>
 
       {/* Progress */}
       {progress && (
-        <div className={`mb-5 card p-5 ${running ? '' : errorCount === 0 ? 'border-emerald-100 bg-emerald-50/30' : 'border-amber-100 bg-amber-50/30'}`}>
+        <div className={`mb-5 card p-5 ${running ? '' : errorCount === 0 ? 'bg-emerald-50/40' : 'bg-amber-50/40'}`}>
           <div className="flex items-center justify-between mb-3">
-            <div className="font-semibold text-sm text-gray-800">
+            <div className="font-semibold text-sm text-baxa-ink">
               {running
                 ? `Creating drafts… ${progress.done} of ${progress.total}`
                 : `Done — ${successCount} created${errorCount > 0 ? `, ${errorCount} failed` : ''}`}
             </div>
             {!running && (
-              <button className="text-xs text-gray-400 hover:text-gray-600"
+              <button className="text-xs text-black/35 hover:text-baxa-ink"
                 onClick={() => { setProgress(null); setResults([]) }}>
                 Clear
               </button>
             )}
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-black/[0.05] rounded-full overflow-hidden">
             <div className="h-full bg-baxa-orange rounded-full transition-all duration-300"
               style={{ width: `${(progress.done / progress.total) * 100}%` }} />
           </div>
@@ -157,7 +158,7 @@ export default function BatchSender() {
           <option value="sent">Sent</option>
           <option value="all">All (with contacts)</option>
         </select>
-        <span className="text-sm text-gray-400">{eligible.length} eligible</span>
+        <span className="text-sm text-black/35">{eligible.length} eligible</span>
         <div className="ml-auto">
           <button className="btn-secondary text-xs" onClick={toggleAll}>
             {selected.size === eligible.length && eligible.length > 0 ? 'Deselect All' : `Select All (${eligible.length})`}
@@ -167,7 +168,7 @@ export default function BatchSender() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading…</div>
+        <div className="flex items-center justify-center h-48 text-black/35 text-sm">Loading…</div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full">
@@ -191,7 +192,7 @@ export default function BatchSender() {
                 const isSelected = selected.has(c.id)
                 return (
                   <tr key={c.id}
-                    className={`table-row ${isSelected ? 'bg-orange-50/40' : ''}`}
+                    className={`table-row ${isSelected ? 'bg-baxa-orange/5' : ''}`}
                     onClick={() => toggle(c.id)}>
                     <td className="table-cell text-center" onClick={e => e.stopPropagation()}>
                       <input type="checkbox" checked={isSelected} onChange={() => toggle(c.id)} className="rounded" />
@@ -199,10 +200,10 @@ export default function BatchSender() {
                     <td className="table-cell">
                       <div className="flex items-center gap-3">
                         <CompanyAvatar name={c.name} />
-                        <span className="font-semibold text-gray-800">{c.name}</span>
+                        <span className="font-semibold text-baxa-ink">{c.name}</span>
                       </div>
                     </td>
-                    <td className="table-cell text-gray-500">{c.contacts.length}</td>
+                    <td className="table-cell text-black/40">{c.contacts.length}</td>
                     <td className="table-cell">
                       <StatusBadge status={c.status} />
                     </td>
@@ -226,7 +227,7 @@ export default function BatchSender() {
               })}
               {eligible.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-gray-400 text-sm">
+                  <td colSpan={5} className="py-16 text-center text-black/35 text-sm">
                     No companies match this filter, or all are missing contacts.
                   </td>
                 </tr>
@@ -236,14 +237,15 @@ export default function BatchSender() {
         </div>
       )}
 
-      <p className="mt-4 text-xs text-gray-400">
+      <p className="mt-4 text-xs text-black/35">
         After generating, go to{' '}
         <a href="https://mail.google.com/mail/#drafts" target="_blank" rel="noopener noreferrer"
-          className="underline underline-offset-2 hover:text-gray-500">
+          className="underline underline-offset-2 hover:text-black/40">
           Gmail Drafts
         </a>{' '}
         to review and send. Drafts are created 300ms apart to stay within rate limits.
       </p>
+      </div>
     </div>
   )
 }

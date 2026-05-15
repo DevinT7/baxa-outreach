@@ -95,7 +95,7 @@ export default function CompanyDetail() {
       {/* Breadcrumb + header */}
       <div className="mb-6">
         <Link to="/companies"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mb-3 group">
+          className="inline-flex items-center gap-1.5 text-xs text-black/35 hover:text-baxa-ink transition-colors mb-3 group">
           <svg className="group-hover:-translate-x-0.5 transition-transform" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
@@ -107,7 +107,7 @@ export default function CompanyDetail() {
             <h1 className="page-title">{company.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <StatusBadge status={company.status} />
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-black/35">
                 {company.contacts.length} contact{company.contacts.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -130,10 +130,10 @@ export default function CompanyDetail() {
 
           {/* Email preview */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <div className="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between bg-baxa-cream/40">
               <div>
-                <h2 className="font-semibold text-sm text-gray-800">Email Preview</h2>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                <h2 className="font-semibold text-sm text-baxa-ink">Email Preview</h2>
+                <p className="text-[11px] text-black/35 mt-0.5">
                   To: {company.contacts.length > 0
                     ? company.contacts.map(c => c.email).join(', ')
                     : <span className="text-red-400">No contacts yet</span>}
@@ -162,23 +162,23 @@ export default function CompanyDetail() {
               )}
             </div>
             <div className="p-5">
-              <div className="text-xs text-gray-500 mb-3 pb-3 border-b border-gray-100">
-                <span className="font-semibold text-gray-700">Subject: </span>{subject}
+              <div className="text-xs text-black/40 mb-3 pb-3 border-b border-black/[0.06]">
+                <span className="font-semibold text-baxa-ink/80">Subject: </span>{subject}
               </div>
-              <div className="text-sm text-gray-700 max-h-72 overflow-y-auto pr-1"
+              <div className="text-sm text-baxa-ink/80 max-h-72 overflow-y-auto pr-1"
                 dangerouslySetInnerHTML={{ __html: body }} />
             </div>
           </div>
 
           {/* Contacts */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h2 className="font-semibold text-sm text-gray-800">
+            <div className="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between bg-baxa-cream/40">
+              <h2 className="font-semibold text-sm text-baxa-ink">
                 Contacts
-                <span className="ml-2 text-xs font-normal text-gray-400">{company.contacts.length}</span>
+                <span className="ml-2 text-xs font-normal text-black/35">{company.contacts.length}</span>
               </h2>
             </div>
-            <ul className="divide-y divide-gray-50">
+            <ul className="divide-y divide-black/[0.04]">
               {company.contacts.map(c => (
                 <li key={c.id} className="flex items-center gap-3 px-5 py-3 group">
                   <div className="w-7 h-7 rounded-lg bg-baxa-orange/8 border border-baxa-orange/10 flex items-center justify-center shrink-0">
@@ -186,9 +186,9 @@ export default function CompanyDetail() {
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                     </svg>
                   </div>
-                  <span className="text-sm text-gray-700 flex-1">{c.email}</span>
+                  <span className="text-sm text-baxa-ink/80 flex-1">{c.email}</span>
                   <button onClick={() => handleDeleteContact(c.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-400">
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-black/20 hover:text-red-400">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
@@ -196,11 +196,11 @@ export default function CompanyDetail() {
                 </li>
               ))}
               {company.contacts.length === 0 && (
-                <li className="px-5 py-4 text-sm text-gray-400">No contacts yet.</li>
+                <li className="px-5 py-4 text-sm text-black/35">No contacts yet.</li>
               )}
             </ul>
             <form onSubmit={handleAddContact}
-              className="flex gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50/40">
+              className="flex gap-2 px-5 py-3 border-t border-black/[0.06] bg-baxa-cream/30">
               <input className="input text-sm" placeholder="Add email address…"
                 value={newEmail} onChange={e => setNewEmail(e.target.value)} type="email" />
               <button type="submit" className="btn-secondary text-xs whitespace-nowrap shrink-0">
@@ -211,19 +211,19 @@ export default function CompanyDetail() {
 
           {/* Email history */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
-              <h2 className="font-semibold text-sm text-gray-800">Email History</h2>
+            <div className="px-5 py-4 border-b border-black/[0.06] bg-baxa-cream/40">
+              <h2 className="font-semibold text-sm text-baxa-ink">Email History</h2>
             </div>
             {company.email_logs?.length > 0 ? (
-              <ul className="divide-y divide-gray-50">
+              <ul className="divide-y divide-black/[0.04]">
                 {company.email_logs.map(log => (
                   <li key={log.id} className="px-5 py-3.5 flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
                       log.status === 'replied' ? 'bg-emerald-400' :
                       log.status === 'sent' ? 'bg-amber-400' : 'bg-blue-400'}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-gray-700 truncate">{log.subject || 'BAXA Outreach'}</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">
+                      <div className="text-sm text-baxa-ink/80 truncate">{log.subject || 'BAXA Outreach'}</div>
+                      <div className="text-[11px] text-black/35 mt-0.5">
                         {log.sent_by && <span className="mr-2">{log.sent_by}</span>}
                         {new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
@@ -245,7 +245,7 @@ export default function CompanyDetail() {
                 ))}
               </ul>
             ) : (
-              <div className="px-5 py-8 text-center text-sm text-gray-400">
+              <div className="px-5 py-8 text-center text-sm text-black/35">
                 No emails sent yet.
               </div>
             )}
@@ -256,7 +256,7 @@ export default function CompanyDetail() {
         <div className="space-y-4">
           {/* Status + notes */}
           <div className="card p-5 space-y-4">
-            <h2 className="font-semibold text-sm text-gray-800">Details</h2>
+            <h2 className="font-semibold text-sm text-baxa-ink">Details</h2>
             <div>
               <label className="label">Status</label>
               <select className="input" value={status} onChange={e => setStatus(e.target.value)}>
@@ -278,16 +278,16 @@ export default function CompanyDetail() {
 
           {/* Info */}
           <div className="card p-5">
-            <h2 className="font-semibold text-sm text-gray-800 mb-4">Info</h2>
+            <h2 className="font-semibold text-sm text-baxa-ink mb-4">Info</h2>
             <dl className="space-y-3">
               {[
                 { label: 'Status', value: <StatusBadge status={company.status} /> },
                 { label: 'Contacts', value: <span className="font-semibold">{company.contacts.length}</span> },
                 { label: 'Emails sent', value: <span className="font-semibold">{company.email_logs?.filter(l => l.status !== 'draft').length ?? 0}</span> },
-                { label: 'Last updated', value: <span className="text-gray-400 text-xs">{new Date(company.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span> },
+                { label: 'Last updated', value: <span className="text-black/35 text-xs">{new Date(company.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span> },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between">
-                  <dt className="text-xs text-gray-400">{label}</dt>
+                  <dt className="text-xs text-black/35">{label}</dt>
                   <dd className="text-sm">{value}</dd>
                 </div>
               ))}

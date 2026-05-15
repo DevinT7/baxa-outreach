@@ -10,7 +10,6 @@ export default function Login() {
     setError(null)
     try {
       await signInWithGoogle()
-      // Supabase will redirect back after auth
     } catch (e) {
       setError(e.message)
       setLoading(false)
@@ -18,47 +17,98 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'linear-gradient(135deg, #f8f6f3 0%, #f0ede8 100%)' }}>
+    <div className="min-h-screen flex" style={{ background: '#f5f3ef' }}>
 
-      {/* Subtle grid texture */}
-      <div className="fixed inset-0 pointer-events-none"
+      {/* ── Left panel ── */}
+      <div className="hidden lg:flex w-[52%] flex-col bg-baxa-ink relative overflow-hidden"
         style={{
-          backgroundImage: 'radial-gradient(circle, #d4c9bb 1px, transparent 1px)',
-          backgroundSize: '32px 32px',
-          opacity: 0.4,
-        }} />
+          backgroundImage: 'radial-gradient(ellipse at 30% 20%, rgba(191,87,0,0.25) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(123,82,171,0.15) 0%, transparent 50%)',
+        }}>
 
-      <div className="relative w-full max-w-sm">
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_48px_-8px_rgba(0,0,0,0.12)] p-10 text-center">
+        {/* Dot grid */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }} />
 
+        {/* Content */}
+        <div className="relative flex flex-col h-full px-12 py-12">
           {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-gray-100 shadow-md flex items-center justify-center"
+          <div className="flex items-center gap-3 mb-auto">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden"
               style={{ background: '#7B52AB' }}>
               <img src="/baxa-logo.png" alt="BAXA" className="w-[85%] h-[85%] object-contain" />
             </div>
+            <div>
+              <div className="font-bold text-sm text-white tracking-tight">BAXA</div>
+              <div className="text-[10px] text-white/30 font-medium">Outreach Portal</div>
+            </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-1.5">Welcome back</h1>
-          <p className="text-sm text-gray-400 mb-8">Sign in to access the outreach portal.</p>
+          {/* Hero copy */}
+          <div className="mb-auto">
+            <h2 className="font-serif italic text-5xl text-white leading-tight mb-4">
+              Corporate<br />Outreach,<br />streamlined.
+            </h2>
+            <p className="text-white/40 text-sm leading-relaxed max-w-xs">
+              Manage sponsorship outreach for hundreds of companies — track status, generate personalized Gmail drafts, and close deals faster.
+            </p>
+          </div>
+
+          {/* Stats strip */}
+          <div className="flex gap-6 border-t border-white/[0.08] pt-6">
+            {[
+              { val: '65+', label: 'Companies tracked' },
+              { val: '1-click', label: 'Draft creation' },
+              { val: '100%', label: 'Personalized' },
+            ].map(({ val, label }) => (
+              <div key={label}>
+                <div className="text-xl font-bold text-white tabular-nums">{val}</div>
+                <div className="text-[11px] text-white/30 mt-0.5">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right panel ── */}
+      <div className="flex-1 flex items-center justify-center px-8 py-12">
+        <div className="w-full max-w-sm">
+
+          {/* Mobile logo */}
+          <div className="flex lg:hidden items-center gap-2.5 mb-10">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden"
+              style={{ background: '#7B52AB' }}>
+              <img src="/baxa-logo.png" alt="BAXA" className="w-[85%] h-[85%] object-contain" />
+            </div>
+            <div className="font-bold text-sm text-baxa-ink">BAXA</div>
+          </div>
+
+          <div className="text-[10px] font-semibold tracking-widest text-black/30 uppercase mb-2">
+            Officers only
+          </div>
+          <h1 className="font-serif italic text-4xl text-baxa-ink mb-2 leading-tight">
+            Welcome back
+          </h1>
+          <p className="text-sm text-black/35 mb-8">
+            Sign in to access the outreach portal.
+          </p>
 
           {error && (
-            <div className="mb-5 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600">
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-medium">
               {error}
             </div>
           )}
 
-          {/* Google sign-in button */}
           <button
             onClick={handleSignIn}
             disabled={loading}
             className="w-full flex items-center justify-center gap-3 px-5 py-3.5 rounded-2xl
-                       bg-gray-900 text-white text-sm font-semibold
-                       hover:bg-gray-800 active:scale-[0.98]
+                       bg-baxa-ink text-white text-sm font-semibold
+                       hover:bg-black active:scale-[0.98]
                        transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed
-                       shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
+                       shadow-[0_4px_16px_rgba(26,24,20,0.2)]"
           >
             {loading ? (
               <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -73,16 +123,15 @@ export default function Login() {
             {loading ? 'Signing in…' : 'Continue with Google'}
           </button>
 
-          <p className="mt-6 text-[11px] text-gray-400 leading-relaxed">
+          <p className="mt-6 text-[11px] text-black/30 leading-relaxed text-center">
             Access is restricted to approved BAXA officers.<br />
             Contact your VP External to get access.
           </p>
-        </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Business Analytics Association · UT Austin
-        </p>
+          <div className="mt-12 pt-6 border-t border-black/[0.06] text-center text-xs text-black/20">
+            Business Analytics Association · UT Austin
+          </div>
+        </div>
       </div>
     </div>
   )
