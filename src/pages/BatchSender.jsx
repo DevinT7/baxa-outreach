@@ -5,6 +5,8 @@ import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge from '../components/StatusBadge'
 import Select from '../components/Select'
 import { CompanyAvatar } from './Dashboard'
+import { useToast } from '../context/ToastContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 export default function BatchSender() {
   const [companies, setCompanies] = useState([])
@@ -14,6 +16,8 @@ export default function BatchSender() {
   const [progress, setProgress] = useState(null)
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
+  const toast = useToast()
+  const confirm = useConfirm()
 
   useEffect(() => {
     getCompanies().then(setCompanies).catch(console.error).finally(() => setLoading(false))
@@ -38,7 +42,17 @@ export default function BatchSender() {
 
   async function runBatch() {
     if (selected.size === 0) return
-    if (!confirm(`Create ${selected.size} Gmail draft${selected.size !== 1 ? 's' : ''}? You'll review and send them from Gmail.`)) return
+
+    const draftCount = companies
+      .filter(c => selected.has(c.id))
+      .reduce((sum, c) => sum + c.contacts.length, 0)
+
+    const ok = await confirm({
+      title: `Generate ${selected.size} batch${selected.size !== 1 ? 'es' : ''}?`,
+      message: `This will create ${draftCount} Gmail draft${draftCount !== 1 ? 's' : ''} — one per contact. You'll review and send them from Gmail.`,
+      confirmLabel: 'Generate Drafts',
+    })
+    if (!ok) return
 
     setRunning(true)
     setResults([])
@@ -47,12 +61,13 @@ export default function BatchSender() {
     try {
       if (!isAuthenticated()) await requestGmailAccess()
     } catch (e) {
-      alert('Gmail sign-in failed: ' + e.message)
+      toast('Gmail sign-in failed: ' + e.message, 'error')
       setRunning(false)
       return
     }
 
     const batch = companies.filter(c => selected.has(c.id))
+    const totalDrafts = batch.reduce((sum, c) => sum + c.contacts.length, 0)
     const { attachmentName, name: senderName } = getSenderInfo()
     const attachmentBase64 = await getEngagementGuideBase64()
     const newResults = []
@@ -86,6 +101,14 @@ export default function BatchSender() {
     setRunning(false)
     getCompanies().then(setCompanies)
     setSelected(new Set())
+
+    const successCount = newResults.filter(r => r.ok).length
+    const errorCount = newResults.filter(r => !r.ok).length
+    if (errorCount === 0) {
+      toast(`${totalDrafts} draft${totalDrafts !== 1 ? 's' : ''} created successfully`)
+    } else {
+      toast(`${successCount} succeeded, ${errorCount} failed`, 'error')
+    }
   }
 
   const successCount = results.filter(r => r.ok).length

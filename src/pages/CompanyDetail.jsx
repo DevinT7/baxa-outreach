@@ -6,6 +6,8 @@ import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge, { STATUS_OPTIONS } from '../components/StatusBadge'
 import Select from '../components/Select'
 import { CompanyAvatar } from './Dashboard'
+import { useToast } from '../context/ToastContext'
+import { useConfirm } from '../context/ConfirmContext'
 
 export default function CompanyDetail() {
   const { id } = useParams()
@@ -19,7 +21,8 @@ export default function CompanyDetail() {
   const [drafting, setDrafting] = useState(false)
   const [draftResults, setDraftResults] = useState([])
   const [error, setError] = useState(null)
-  const [saved, setSaved] = useState(false)
+  const toast = useToast()
+  const confirm = useConfirm()
 
   useEffect(() => { reload() }, [id])
 
@@ -38,11 +41,11 @@ export default function CompanyDetail() {
     setSaving(true)
     try {
       await updateCompany(id, { notes, status })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
       await reload()
-    } catch (e) { setError(e.message) }
-    finally { setSaving(false) }
+      toast('Changes saved')
+    } catch (e) {
+      toast(e.message, 'error')
+    } finally { setSaving(false) }
   }
 
   async function handleAddContact(e) {
@@ -53,13 +56,23 @@ export default function CompanyDetail() {
       setNewEmail('')
       setNewContactName('')
       await reload()
-    } catch (e) { setError(e.message) }
+      toast('Contact added')
+    } catch (e) { toast(e.message, 'error') }
   }
 
   async function handleDeleteContact(contactId) {
-    if (!confirm('Remove this contact?')) return
-    try { await deleteContact(contactId); await reload() }
-    catch (e) { setError(e.message) }
+    const ok = await confirm({
+      title: 'Remove contact?',
+      message: 'This contact will be permanently removed from this company.',
+      confirmLabel: 'Remove',
+      danger: true,
+    })
+    if (!ok) return
+    try {
+      await deleteContact(contactId)
+      await reload()
+      toast('Contact removed')
+    } catch (e) { toast(e.message, 'error') }
   }
 
   async function handleCreateDraft() {
@@ -71,7 +84,6 @@ export default function CompanyDetail() {
       const { attachmentName, name: senderName } = getSenderInfo()
       const attachmentBase64 = await getEngagementGuideBase64()
       const results = []
-      // One draft per contact
       for (const contact of company.contacts) {
         const { subject, body } = renderEmail(company.name, contact.name, contact.email)
         const { draftId, draftUrl } = await createDraft({
@@ -88,8 +100,11 @@ export default function CompanyDetail() {
       setStatus('draft_created')
       setDraftResults(results)
       await reload()
-    } catch (e) { setError(e.message) }
-    finally { setDrafting(false) }
+      toast(`${results.length} draft${results.length !== 1 ? 's' : ''} created in Gmail`)
+    } catch (e) {
+      toast(e.message, 'error')
+      setError(e.message)
+    } finally { setDrafting(false) }
   }
 
   if (loading) return (
@@ -294,7 +309,7 @@ export default function CompanyDetail() {
                 placeholder="e.g. Spoke at GM spring 2026, interested in next year…" />
             </div>
             <button className="btn-primary w-full justify-center" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save Changes'}
+              {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
 
