@@ -3,6 +3,7 @@ import { getCompanies, updateCompany, logDraft } from '../lib/supabase'
 import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
 import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge from '../components/StatusBadge'
+import Select from '../components/Select'
 import { CompanyAvatar } from './Dashboard'
 
 export default function BatchSender() {
@@ -160,13 +161,17 @@ export default function BatchSender() {
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
-        <select className="input max-w-[190px]" value={filter}
-          onChange={e => { setFilter(e.target.value); setSelected(new Set()) }}>
-          <option value="not_contacted">Not Contacted</option>
-          <option value="draft_created">Draft Created</option>
-          <option value="sent">Sent</option>
-          <option value="all">All (with contacts)</option>
-        </select>
+        <Select
+          className="max-w-[190px]"
+          value={filter}
+          onChange={v => { setFilter(v); setSelected(new Set()) }}
+          options={[
+            { value: 'not_contacted', label: 'Not Contacted' },
+            { value: 'draft_created', label: 'Draft Created' },
+            { value: 'sent',          label: 'Sent' },
+            { value: 'all',           label: 'All (with contacts)' },
+          ]}
+        />
         <span className="text-sm text-black/35">{eligible.length} eligible</span>
         <div className="ml-auto">
           <button className="btn-secondary text-xs" onClick={toggleAll}>

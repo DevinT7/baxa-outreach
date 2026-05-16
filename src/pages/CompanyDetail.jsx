@@ -4,6 +4,7 @@ import { getCompany, updateCompany, addContact, deleteContact, logDraft } from '
 import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
 import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge, { STATUS_OPTIONS } from '../components/StatusBadge'
+import Select from '../components/Select'
 import { CompanyAvatar } from './Dashboard'
 
 export default function CompanyDetail() {
@@ -280,11 +281,11 @@ export default function CompanyDetail() {
             <h2 className="font-semibold text-sm text-baxa-ink">Details</h2>
             <div>
               <label className="label">Status</label>
-              <select className="input" value={status} onChange={e => setStatus(e.target.value)}>
-                {STATUS_OPTIONS.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
+              <Select
+                value={status}
+                onChange={setStatus}
+                options={STATUS_OPTIONS}
+              />
             </div>
             <div>
               <label className="label">Notes</label>
