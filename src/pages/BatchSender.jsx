@@ -85,7 +85,7 @@ export default function BatchSender() {
             attachmentBase64,
             attachmentName,
           })
-          await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: senderName })
+          await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: senderName, contactEmail: contact.email, contactName: contact.name })
           await sleep(300)
         }
         await updateCompany(c.id, { status: 'draft_created', last_contacted_at: new Date().toISOString() })

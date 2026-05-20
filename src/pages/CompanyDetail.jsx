@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getCompany, updateCompany, addContact, deleteContact, logDraft } from '../lib/supabase'
 import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
-import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
+import { renderEmail, renderFollowUp, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge, { STATUS_OPTIONS } from '../components/StatusBadge'
 import Select from '../components/Select'
 import { CompanyAvatar } from './Dashboard'
@@ -93,7 +93,7 @@ export default function CompanyDetail() {
           attachmentBase64,
           attachmentName,
         })
-        await logDraft(id, { gmailDraftId: draftId, subject, sentBy: senderName })
+        await logDraft(id, { gmailDraftId: draftId, subject, sentBy: senderName, contactEmail: contact.email, contactName: contact.name })
         results.push({ email: contact.email, name: contact.name, draftUrl })
       }
       await updateCompany(id, { status: 'draft_created' })
@@ -105,6 +105,44 @@ export default function CompanyDetail() {
       toast(e.message, 'error')
       setError(e.message)
     } finally { setDrafting(false) }
+  }
+
+  async function handleFollowUp(log) {
+    // For old logs without stored contact info, fall back to the company's contacts
+    const contactEmail = log.contact_email || company.contacts[0]?.email || null
+    const contactName  = log.contact_name  || company.contacts[0]?.name  || null
+
+    if (!contactEmail) {
+      toast('No contact email found — add a contact to this company first.', 'error')
+      return
+    }
+
+    try {
+      if (!isAuthenticated()) await requestGmailAccess()
+      const { attachmentName, name: senderName } = getSenderInfo()
+      const attachmentBase64 = await getEngagementGuideBase64()
+      const { subject, body } = renderFollowUp(company.name, contactName, contactEmail)
+      const { draftId, draftUrl } = await createDraft({
+        toEmails: contactEmail,
+        subject,
+        htmlBody: body,
+        attachmentBase64,
+        attachmentName,
+      })
+      await logDraft(id, {
+        gmailDraftId: draftId,
+        subject,
+        sentBy: senderName,
+        contactEmail,
+        contactName,
+        isFollowup: true,
+      })
+      await reload()
+      toast('Follow-up draft created in Gmail')
+      window.open(draftUrl, '_blank')
+    } catch (e) {
+      toast(e.message, 'error')
+    }
   }
 
   if (loading) return (
@@ -253,30 +291,63 @@ export default function CompanyDetail() {
             </div>
             {company.email_logs?.length > 0 ? (
               <ul className="divide-y divide-black/[0.04]">
-                {company.email_logs.map(log => (
+                {[...company.email_logs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(log => (
                   <li key={log.id} className="px-5 py-3.5 flex items-center gap-3">
+                    {/* Status dot */}
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
                       log.status === 'replied' ? 'bg-emerald-400' :
-                      log.status === 'sent' ? 'bg-amber-400' : 'bg-blue-400'}`} />
+                      log.status === 'sent'    ? 'bg-amber-400'  : 'bg-blue-400'}`} />
+
+                    {/* Main info */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm text-baxa-ink/80 truncate">{log.subject || 'BAXA Outreach'}</div>
-                      <div className="text-[11px] text-black/35 mt-0.5">
-                        {log.sent_by && <span className="mr-2">{log.sent_by}</span>}
-                        {new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-baxa-ink/80 truncate">{log.subject || 'BAXA Outreach'}</span>
+                        {log.is_followup && (
+                          <span className="shrink-0 text-[10px] font-semibold bg-violet-50 text-violet-500 border border-violet-100 px-1.5 py-0.5 rounded-full">
+                            Follow-up
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-black/35 mt-0.5 flex items-center gap-1.5">
+                        {log.contact_name || log.contact_email
+                          ? <span className="font-medium text-black/45">{log.contact_name || log.contact_email}</span>
+                          : null}
+                        {(log.contact_name || log.contact_email) && <span>·</span>}
+                        {log.sent_by && <span>{log.sent_by}</span>}
+                        {log.sent_by && <span>·</span>}
+                        <span>{new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       </div>
                     </div>
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+
+                    {/* Status badge */}
+                    <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                       log.status === 'replied' ? 'bg-emerald-50 text-emerald-600' :
-                      log.status === 'sent' ? 'bg-amber-50 text-amber-600' :
+                      log.status === 'sent'    ? 'bg-amber-50 text-amber-600'    :
                       'bg-blue-50 text-blue-600'}`}>
                       {log.status}
                     </span>
+
+                    {/* Open in Gmail */}
                     {log.gmail_draft_id && (
                       <a href={`https://mail.google.com/mail/#drafts/${log.gmail_draft_id}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-baxa-orange hover:underline underline-offset-2 shrink-0">
+                        className="shrink-0 text-xs text-baxa-orange hover:underline underline-offset-2">
                         Open →
                       </a>
+                    )}
+
+                    {/* Follow-up button — always visible for non-replied logs */}
+                    {log.status !== 'replied' && (
+                      <button
+                        onClick={() => handleFollowUp(log)}
+                        className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-baxa-ink/50 hover:text-baxa-orange border border-black/[0.08] hover:border-baxa-orange/30 px-2 py-1 rounded-lg transition-colors"
+                        title="Draft a follow-up to this contact"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 14 4 19 4 14"/><path d="M20 9a9 9 0 0 1-9 9H4"/><path d="M4 5l5-5 5 5"/>
+                        </svg>
+                        Follow up
+                      </button>
                     )}
                   </li>
                 ))}

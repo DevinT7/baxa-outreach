@@ -79,7 +79,7 @@ export async function deleteContact(contactId) {
 
 // ── Email Logs ────────────────────────────────────────────────────────────────
 
-export async function logDraft(companyId, { gmailDraftId, subject, sentBy }) {
+export async function logDraft(companyId, { gmailDraftId, subject, sentBy, contactEmail, contactName, isFollowup = false }) {
   const { data, error } = await supabase
     .from('email_logs')
     .insert({
@@ -88,6 +88,9 @@ export async function logDraft(companyId, { gmailDraftId, subject, sentBy }) {
       status: 'draft',
       subject,
       sent_by: sentBy,
+      contact_email: contactEmail ?? null,
+      contact_name: contactName ?? null,
+      is_followup: isFollowup,
     })
     .select()
     .single()

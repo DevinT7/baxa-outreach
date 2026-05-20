@@ -21,9 +21,25 @@ export const DEFAULT_TEMPLATE = `<p>Hi {{contactName}},</p>
 Business Analytics Association · UT Austin<br>
 <a href="https://txbaxa.web.app/">txbaxa.web.app</a> · texasbaxassociation@gmail.com</p>`
 
+export const DEFAULT_FOLLOWUP_SUBJECT = 'Following up — BAXA x {{companyName}}'
+
+export const DEFAULT_FOLLOWUP_TEMPLATE = `<p>Hi {{contactName}},</p>
+
+<p>I wanted to follow up on my previous email about a potential partnership between BAXA and {{companyName}}. If you have any questions, please let me know!</p>
+
+<p>We'd love to schedule a quick 15-minute call, and I'm happy to work around your schedule!</p>
+
+<p>Thanks again,<br>
+<strong>{{yourName}}</strong><br>
+{{yourTitle}}<br>
+Business Analytics Association · UT Austin<br>
+<a href="https://txbaxa.web.app/">txbaxa.web.app</a> · texasbaxassociation@gmail.com</p>`
+
 const STORAGE_KEYS = {
   template: 'baxa_email_template',
   subject: 'baxa_email_subject',
+  followupTemplate: 'baxa_followup_template',
+  followupSubject: 'baxa_followup_subject',
   senderName: 'baxa_sender_name',
   senderTitle: 'baxa_sender_title',
   attachmentName: 'baxa_attachment_name',
@@ -53,6 +69,22 @@ export function saveSubjectLine(subject) {
   localStorage.setItem(STORAGE_KEYS.subject, subject)
 }
 
+export function getFollowupTemplate() {
+  return localStorage.getItem(STORAGE_KEYS.followupTemplate) || DEFAULT_FOLLOWUP_TEMPLATE
+}
+
+export function getFollowupSubject() {
+  return localStorage.getItem(STORAGE_KEYS.followupSubject) || DEFAULT_FOLLOWUP_SUBJECT
+}
+
+export function saveFollowupTemplate(template) {
+  localStorage.setItem(STORAGE_KEYS.followupTemplate, template)
+}
+
+export function saveFollowupSubject(subject) {
+  localStorage.setItem(STORAGE_KEYS.followupSubject, subject)
+}
+
 export function saveSenderInfo({ name, title, attachmentName }) {
   localStorage.setItem(STORAGE_KEYS.senderName, name)
   localStorage.setItem(STORAGE_KEYS.senderTitle, title)
@@ -76,6 +108,26 @@ function extractFirstNameFromEmail(email) {
  * Replaces {{companyName}}, {{contactName}}, {{yourName}}, {{yourTitle}}.
  * Name priority: stored contact name → extracted from email → "there"
  */
+/**
+ * Render the follow-up template for a specific contact.
+ * Same placeholder logic as renderEmail.
+ */
+export function renderFollowUp(companyName, contactName = null, contactEmail = null, overrides = {}) {
+  const { name, title } = { ...getSenderInfo(), ...overrides }
+  const subject = getFollowupSubject().replace('{{companyName}}', companyName)
+  const firstName = contactName
+    ? contactName.trim().split(' ')[0]
+    : contactEmail
+      ? extractFirstNameFromEmail(contactEmail)
+      : 'there'
+  const body = getFollowupTemplate()
+    .replace(/\{\{companyName\}\}/g, companyName)
+    .replace(/\{\{contactName\}\}/g, firstName)
+    .replace(/\{\{yourName\}\}/g, name)
+    .replace(/\{\{yourTitle\}\}/g, title)
+  return { subject, body }
+}
+
 export function renderEmail(companyName, contactName = null, contactEmail = null, overrides = {}) {
   const { name, title } = { ...getSenderInfo(), ...overrides }
   const subject = getSubjectLine().replace('{{companyName}}', companyName)
