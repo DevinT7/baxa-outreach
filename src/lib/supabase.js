@@ -77,6 +77,17 @@ export async function deleteContact(contactId) {
   if (error) throw error
 }
 
+export async function setContactBounced(contactId, bounced) {
+  const { data, error } = await supabase
+    .from('contacts')
+    .update({ bounced })
+    .eq('id', contactId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ── Email Logs ────────────────────────────────────────────────────────────────
 
 export async function logDraft(companyId, { gmailDraftId, subject, sentBy, contactEmail, contactName, isFollowup = false }) {

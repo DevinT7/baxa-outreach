@@ -75,8 +75,8 @@ export default function BatchSender() {
     for (let i = 0; i < batch.length; i++) {
       const c = batch[i]
       try {
-        // One draft per contact, personalized with their name
-        for (const contact of c.contacts) {
+        // One draft per active (non-bounced) contact
+        for (const contact of c.contacts.filter(ct => !ct.bounced)) {
           const { subject, body } = renderEmail(c.name, contact.name, contact.email)
           const { draftId, draftUrl } = await createDraft({
             toEmails: contact.email,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getCompany, updateCompany, addContact, deleteContact, logDraft } from '../lib/supabase'
+import { getCompany, updateCompany, addContact, deleteContact, logDraft, setContactBounced } from '../lib/supabase'
 import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
 import { renderEmail, renderFollowUp, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge, { STATUS_OPTIONS } from '../components/StatusBadge'
@@ -75,6 +75,15 @@ export default function CompanyDetail() {
     } catch (e) { toast(e.message, 'error') }
   }
 
+  async function handleToggleBounced(contact) {
+    const marking = !contact.bounced
+    try {
+      await setContactBounced(contact.id, marking)
+      await reload()
+      toast(marking ? 'Marked as bounced — update this contact when you find a replacement.' : 'Contact marked as active')
+    } catch (e) { toast(e.message, 'error') }
+  }
+
   async function handleCreateDraft() {
     setDrafting(true)
     setError(null)
@@ -84,7 +93,13 @@ export default function CompanyDetail() {
       const { attachmentName, name: senderName } = getSenderInfo()
       const attachmentBase64 = await getEngagementGuideBase64()
       const results = []
-      for (const contact of company.contacts) {
+      const activeContacts = company.contacts.filter(c => !c.bounced)
+      if (activeContacts.length === 0) {
+        toast('All contacts are marked as bounced — add a replacement first.', 'error')
+        setDrafting(false)
+        return
+      }
+      for (const contact of activeContacts) {
         const { subject, body } = renderEmail(company.name, contact.name, contact.email)
         const { draftId, draftUrl } = await createDraft({
           toEmails: contact.email,
@@ -250,22 +265,55 @@ export default function CompanyDetail() {
             </div>
             <ul className="divide-y divide-black/[0.04]">
               {company.contacts.map(c => (
-                <li key={c.id} className="flex items-center gap-3 px-5 py-3 group">
-                  <div className="w-7 h-7 rounded-lg bg-baxa-orange/[0.08] border border-baxa-orange/10 flex items-center justify-center shrink-0">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#BF5700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                    </svg>
+                <li key={c.id} className={`flex items-center gap-3 px-5 py-3 group transition-colors ${c.bounced ? 'bg-red-50/40' : ''}`}>
+                  {/* Icon */}
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    c.bounced
+                      ? 'bg-red-100/60 border border-red-200/60'
+                      : 'bg-baxa-orange/[0.08] border border-baxa-orange/10'}`}>
+                    {c.bounced ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                      </svg>
+                    ) : (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#BF5700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                    )}
                   </div>
+
+                  {/* Email + name */}
                   <div className="flex-1 min-w-0">
-                    {c.name && <div className="text-xs font-semibold text-baxa-ink truncate">{c.name}</div>}
-                    <div className="text-sm text-baxa-ink/60 truncate">{c.email}</div>
+                    <div className="flex items-center gap-2">
+                      {c.name && <span className={`text-xs font-semibold truncate ${c.bounced ? 'text-black/30 line-through' : 'text-baxa-ink'}`}>{c.name}</span>}
+                      {c.bounced && (
+                        <span className="shrink-0 text-[10px] font-semibold bg-red-100 text-red-500 border border-red-200 px-1.5 py-0.5 rounded-full">
+                          Bounced
+                        </span>
+                      )}
+                    </div>
+                    <div className={`text-sm truncate ${c.bounced ? 'text-black/30 line-through' : 'text-baxa-ink/60'}`}>{c.email}</div>
                   </div>
-                  <button onClick={() => handleDeleteContact(c.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-black/20 hover:text-red-400 shrink-0">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
+
+                  {/* Actions — visible on hover */}
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                      onClick={() => handleToggleBounced(c)}
+                      title={c.bounced ? 'Mark as active' : 'Mark as bounced'}
+                      className={`text-xs font-medium px-2 py-1 rounded-lg border transition-colors ${
+                        c.bounced
+                          ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                          : 'border-black/[0.08] text-black/35 hover:text-red-500 hover:border-red-200 hover:bg-red-50/50'
+                      }`}>
+                      {c.bounced ? '✓ Restore' : 'Bounced'}
+                    </button>
+                    <button onClick={() => handleDeleteContact(c.id)}
+                      className="text-black/20 hover:text-red-400 p-1">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
                 </li>
               ))}
               {company.contacts.length === 0 && (

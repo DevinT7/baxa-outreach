@@ -188,9 +188,16 @@ export default function CompanyList() {
                       </td>
                       <td className="table-cell">
                         {c.contacts?.length > 0 ? (
-                          <span className="text-black/40">
-                            {c.contacts.length} email{c.contacts.length !== 1 ? 's' : ''}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-black/40">
+                              {c.contacts.filter(ct => !ct.bounced).length} active
+                            </span>
+                            {c.contacts.some(ct => ct.bounced) && (
+                              <span className="text-[11px] font-semibold text-red-400 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-full">
+                                {c.contacts.filter(ct => ct.bounced).length} bounced
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-xs text-red-400 font-medium">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -267,14 +274,21 @@ export default function CompanyList() {
                             <CompanyAvatar name={c.name} />
                             <span className="font-semibold text-sm text-baxa-ink leading-tight line-clamp-2">{c.name}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             {c.contacts?.length > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-black/35">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
-                                </svg>
-                                {c.contacts.length} contact{c.contacts.length !== 1 ? 's' : ''}
-                              </span>
+                              <>
+                                <span className="inline-flex items-center gap-1 text-[11px] text-black/35">
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                  </svg>
+                                  {c.contacts.filter(ct => !ct.bounced).length} active
+                                </span>
+                                {c.contacts.some(ct => ct.bounced) && (
+                                  <span className="text-[10px] font-semibold text-red-400 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-full">
+                                    {c.contacts.filter(ct => ct.bounced).length} bounced
+                                  </span>
+                                )}
+                              </>
                             ) : (
                               <span className="text-[11px] text-red-400 font-medium">No contacts</span>
                             )}
