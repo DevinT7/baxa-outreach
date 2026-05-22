@@ -20,6 +20,8 @@ export default function CompanyDetail() {
   const [newContactName, setNewContactName] = useState('')
   const [drafting, setDrafting] = useState(false)
   const [draftResults, setDraftResults] = useState([])
+  const [creatingFollowup, setCreatingFollowup] = useState(false)
+  const [followupDone, setFollowupDone] = useState(false)
   const [error, setError] = useState(null)
   const toast = useToast()
   const confirm = useConfirm()
@@ -122,42 +124,44 @@ export default function CompanyDetail() {
     } finally { setDrafting(false) }
   }
 
-  async function handleFollowUp(log) {
-    // For old logs without stored contact info, fall back to the company's contacts
-    const contactEmail = log.contact_email || company.contacts[0]?.email || null
-    const contactName  = log.contact_name  || company.contacts[0]?.name  || null
-
-    if (!contactEmail) {
-      toast('No contact email found — add a contact to this company first.', 'error')
+  async function handleCreateFollowUp() {
+    const activeContacts = company.contacts.filter(c => !c.bounced)
+    if (activeContacts.length === 0) {
+      toast('All contacts are marked as bounced — add a replacement first.', 'error')
       return
     }
-
+    setCreatingFollowup(true)
     try {
       if (!isAuthenticated()) await requestGmailAccess()
       const { attachmentName, name: senderName } = getSenderInfo()
       const attachmentBase64 = await getEngagementGuideBase64()
-      const { subject, body } = renderFollowUp(company.name, contactName, contactEmail)
-      const { draftId, draftUrl } = await createDraft({
-        toEmails: contactEmail,
-        subject,
-        htmlBody: body,
-        attachmentBase64,
-        attachmentName,
-      })
-      await logDraft(id, {
-        gmailDraftId: draftId,
-        subject,
-        sentBy: senderName,
-        contactEmail,
-        contactName,
-        isFollowup: true,
-      })
+      const results = []
+      for (const contact of activeContacts) {
+        const { subject, body } = renderFollowUp(company.name, contact.name, contact.email)
+        const { draftId, draftUrl } = await createDraft({
+          toEmails: contact.email,
+          subject,
+          htmlBody: body,
+          attachmentBase64,
+          attachmentName,
+        })
+        await logDraft(id, {
+          gmailDraftId: draftId,
+          subject,
+          sentBy: senderName,
+          contactEmail: contact.email,
+          contactName: contact.name,
+          isFollowup: true,
+        })
+        results.push({ email: contact.email, name: contact.name, draftUrl })
+      }
       await reload()
-      toast('Follow-up draft created in Gmail')
-      window.open(draftUrl, '_blank')
+      toast(`${results.length} follow-up draft${results.length !== 1 ? 's' : ''} created in Gmail`)
+      setFollowupDone(true)
+      setTimeout(() => setFollowupDone(false), 2500)
     } catch (e) {
       toast(e.message, 'error')
-    }
+    } finally { setCreatingFollowup(false) }
   }
 
   if (loading) return (
@@ -214,37 +218,52 @@ export default function CompanyDetail() {
 
           {/* Email preview */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-black/[0.06] flex items-center justify-between bg-baxa-cream/40">
-              <div>
-                <h2 className="font-semibold text-sm text-baxa-ink">Email Preview</h2>
-                <p className="text-[11px] text-black/35 mt-0.5">
-                  {company.contacts.length > 0
-                    ? `${company.contacts.length} draft${company.contacts.length !== 1 ? 's' : ''} will be created — one per contact`
-                    : <span className="text-red-400">No contacts yet</span>}
-                </p>
-              </div>
-              {draftResults.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {draftResults.map(r => (
-                    <a key={r.email} href={r.draftUrl} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-baxa-ink bg-baxa-cream border border-black/[0.08] px-2.5 py-1 rounded-full hover:bg-baxa-cream-2 transition-colors">
-                      {r.name ? r.name.split(' ')[0] : r.email.split('@')[0]} →
-                    </a>
-                  ))}
+            <div className="px-5 py-4 border-b border-black/[0.06] bg-baxa-cream/40">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-sm text-baxa-ink">Email Preview</h2>
+                  <p className="text-[11px] text-black/35 mt-0.5">
+                    {company.contacts.filter(c => !c.bounced).length > 0
+                      ? `${company.contacts.filter(c => !c.bounced).length} active contact${company.contacts.filter(c => !c.bounced).length !== 1 ? 's' : ''} — one draft per contact`
+                      : <span className="text-red-400">No active contacts</span>}
+                  </p>
                 </div>
-              ) : (
-                <button className="btn-primary text-xs" onClick={handleCreateDraft}
-                  disabled={drafting || company.contacts.length === 0}
-                  title={company.contacts.length === 0 ? 'Add contacts first' : ''}>
-                  {drafting ? (
-                    <><span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> Creating…</>
-                  ) : (
-                    <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                    </svg> Create Drafts</>
-                  )}
-                </button>
-              )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Create Drafts */}
+                  <button className="btn-primary text-xs" onClick={handleCreateDraft}
+                    disabled={drafting || creatingFollowup || company.contacts.filter(c => !c.bounced).length === 0}
+                    title={company.contacts.filter(c => !c.bounced).length === 0 ? 'Add active contacts first' : ''}>
+                    {drafting ? (
+                      <><span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin" /> Creating…</>
+                    ) : draftResults.length > 0 ? (
+                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg> Drafts Created</>
+                    ) : (
+                      <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                      </svg> Create Drafts</>
+                    )}
+                  </button>
+
+                  {/* Create Follow-up */}
+                  <button className="btn-secondary text-xs" onClick={handleCreateFollowUp}
+                    disabled={drafting || creatingFollowup || company.contacts.filter(c => !c.bounced).length === 0}
+                    title={company.contacts.filter(c => !c.bounced).length === 0 ? 'Add active contacts first' : ''}>
+                    {creatingFollowup ? (
+                      <><span className="w-3 h-3 rounded-full border-2 border-baxa-ink/30 border-t-transparent animate-spin" /> Creating…</>
+                    ) : followupDone ? (
+                      <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg> Follow-ups Created</>
+                    ) : (
+                      <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 14 4 19 4 14"/><path d="M20 9a9 9 0 0 1-9 9H4"/><path d="M4 5l5-5 5 5"/>
+                      </svg> Create Follow-up</>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="p-5">
               <div className="text-xs text-black/40 mb-3 pb-3 border-b border-black/[0.06]">
@@ -384,19 +403,6 @@ export default function CompanyDetail() {
                       </a>
                     )}
 
-                    {/* Follow-up button — always visible for non-replied logs */}
-                    {log.status !== 'replied' && (
-                      <button
-                        onClick={() => handleFollowUp(log)}
-                        className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-baxa-ink/50 hover:text-baxa-orange border border-black/[0.08] hover:border-baxa-orange/30 px-2 py-1 rounded-lg transition-colors"
-                        title="Draft a follow-up to this contact"
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="9 14 4 19 4 14"/><path d="M20 9a9 9 0 0 1-9 9H4"/><path d="M4 5l5-5 5 5"/>
-                        </svg>
-                        Follow up
-                      </button>
-                    )}
                   </li>
                 ))}
               </ul>
