@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getCompanies, updateCompany, logDraft } from '../lib/supabase'
 import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
 import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
@@ -9,23 +10,54 @@ import { useToast } from '../context/ToastContext'
 import { useConfirm } from '../context/ConfirmContext'
 
 export default function BatchSender() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(new Set())
-  const [filter, setFilter] = useState('not_contacted')
+  const [filter, setFilter] = useState('all')
   const [progress, setProgress] = useState(null)
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
   const toast = useToast()
   const confirm = useConfirm()
 
+  // Import mode — triggered by ?from=import&ids=id1,id2,...
+  const fromImport = searchParams.get('from') === 'import'
+  const importIds  = useMemo(() => {
+    const raw = searchParams.get('ids')
+    return raw ? new Set(raw.split(',').filter(Boolean)) : new Set()
+  }, [searchParams])
+
   useEffect(() => {
-    getCompanies().then(setCompanies).catch(console.error).finally(() => setLoading(false))
+    getCompanies().then(data => {
+      setCompanies(data)
+      // Pre-select imported companies that have contacts
+      if (fromImport && importIds.size > 0) {
+        const preselect = new Set(
+          data
+            .filter(c => importIds.has(c.id) && c.contacts.filter(ct => !ct.bounced).length > 0)
+            .map(c => c.id)
+        )
+        setSelected(preselect)
+      } else {
+        // Normal mode: default filter is not_contacted
+        setFilter('not_contacted')
+      }
+    }).catch(console.error).finally(() => setLoading(false))
   }, [])
 
-  const eligible = companies.filter(c =>
-    (filter === 'all' ? true : c.status === filter) && c.contacts.length > 0
-  )
+  const eligible = useMemo(() => {
+    if (fromImport && importIds.size > 0) {
+      // Import mode: only show the imported companies that have contacts
+      return companies.filter(c =>
+        importIds.has(c.id) && c.contacts.filter(ct => !ct.bounced).length > 0
+      )
+    }
+    return companies.filter(c =>
+      (filter === 'all' ? true : c.status === filter) && c.contacts.length > 0
+    )
+  }, [companies, filter, fromImport, importIds])
 
   function toggleAll() {
     setSelected(selected.size === eligible.length
@@ -141,6 +173,27 @@ export default function BatchSender() {
           </div>
         </div>
 
+      {/* Import mode banner */}
+      {fromImport && !running && !progress && (
+        <div className="mb-5 flex items-center gap-3 px-4 py-3 bg-baxa-orange/[0.06] border border-baxa-orange/20 rounded-xl">
+          <div className="w-7 h-7 rounded-lg bg-baxa-orange/15 flex items-center justify-center shrink-0 text-baxa-orange">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0 text-sm">
+            <span className="font-semibold text-baxa-ink">Showing your {eligible.length} recently imported {eligible.length === 1 ? 'company' : 'companies'}</span>
+            <span className="text-black/40"> — all pre-selected and ready to send.</span>
+          </div>
+          <button
+            className="text-xs text-black/35 hover:text-baxa-ink shrink-0 transition-colors"
+            onClick={() => { setSearchParams({}); setFilter('not_contacted'); setSelected(new Set()) }}
+          >
+            View all companies ×
+          </button>
+        </div>
+      )}
+
       {/* Progress */}
       {progress && (
         <div className={`mb-5 card p-5 ${running ? '' : errorCount === 0 ? 'bg-emerald-50/40' : 'bg-amber-50/40'}`}>
@@ -184,17 +237,19 @@ export default function BatchSender() {
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
-        <Select
-          className="max-w-[190px]"
-          value={filter}
-          onChange={v => { setFilter(v); setSelected(new Set()) }}
-          options={[
-            { value: 'not_contacted', label: 'Not Contacted' },
-            { value: 'draft_created', label: 'Draft Created' },
-            { value: 'sent',          label: 'Sent' },
-            { value: 'all',           label: 'All (with contacts)' },
-          ]}
-        />
+        {!fromImport && (
+          <Select
+            className="max-w-[190px]"
+            value={filter}
+            onChange={v => { setFilter(v); setSelected(new Set()) }}
+            options={[
+              { value: 'not_contacted', label: 'Not Contacted' },
+              { value: 'draft_created', label: 'Draft Created' },
+              { value: 'sent',          label: 'Sent' },
+              { value: 'all',           label: 'All (with contacts)' },
+            ]}
+          />
+        )}
         <span className="text-sm text-black/35">{eligible.length} eligible</span>
         <div className="ml-auto">
           <button className="btn-secondary text-xs" onClick={toggleAll}>
