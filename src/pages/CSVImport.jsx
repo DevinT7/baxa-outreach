@@ -356,6 +356,13 @@ export default function CSVImport() {
     const totalNewContacts = parsed.reduce((s, c) => s + c.newContacts.length, 0)
     const totalActionable  = newCos.length + updateCos.length
 
+    // IDs of all companies in this CSV that already exist (for the "email anyway" path)
+    const allExistingIds = parsed.filter(c => c.existingId).map(c => c.existingId)
+
+    function goToBatchWithAll() {
+      navigate(`/batch?from=import&ids=${allExistingIds.join(',')}`)
+    }
+
     return (
       <div>
         <div className="max-w-3xl mx-auto px-8 pt-10 pb-10">
@@ -366,20 +373,24 @@ export default function CSVImport() {
               <p className="text-sm text-black/35 mt-1">
                 {newCos.length > 0 && <>{newCos.length} new {newCos.length === 1 ? 'company' : 'companies'}{totalNewContacts > 0 ? ' · ' : ''}</>}
                 {totalNewContacts > 0 && <><span className="font-semibold text-black/50">{totalNewContacts} contact{totalNewContacts !== 1 ? 's' : ''}</span> to add</>}
+                {totalActionable === 0 && <span className="text-black/35">All companies already in portal</span>}
               </p>
             </div>
             <div className="flex gap-2 mt-1 shrink-0">
               <button className="btn-secondary" onClick={reset}>← Back</button>
-              <button
-                className="btn-orange"
-                onClick={runImport}
-                disabled={totalActionable === 0}
-              >
-                {totalActionable === 0
-                  ? 'Nothing to import'
-                  : `Import ${newCos.length > 0 ? `${newCos.length} ${newCos.length === 1 ? 'Company' : 'Companies'}` : ''}${newCos.length > 0 && totalNewContacts > 0 ? ' + ' : ''}${totalNewContacts > 0 ? `${totalNewContacts} Contacts` : ''}`
-                }
-              </button>
+              {totalActionable === 0 ? (
+                // Nothing new to import — go straight to Batch Sender with these companies
+                <button className="btn-orange" onClick={goToBatchWithAll}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                  Email These Companies →
+                </button>
+              ) : (
+                <button className="btn-orange" onClick={runImport}>
+                  {`Import ${newCos.length > 0 ? `${newCos.length} ${newCos.length === 1 ? 'Company' : 'Companies'}` : ''}${newCos.length > 0 && totalNewContacts > 0 ? ' + ' : ''}${totalNewContacts > 0 ? `${totalNewContacts} Contacts` : ''}`}
+                </button>
+              )}
             </div>
           </div>
 
@@ -395,13 +406,21 @@ export default function CSVImport() {
             </div>
             <div className="card p-4 bg-black/[0.02]">
               <div className="text-2xl font-bold text-black/30">{skipCos.length}</div>
-              <div className="text-xs text-black/40 mt-0.5">Already Exist</div>
+              <div className="text-xs text-black/40 mt-0.5">Already in Portal</div>
             </div>
           </div>
 
           {totalActionable === 0 && (
-            <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-700">
-              All companies in this CSV already exist in the portal with these contacts. Nothing new to import.
+            <div className="mb-5 flex items-start gap-3 px-4 py-3.5 bg-baxa-orange/[0.05] border border-baxa-orange/20 rounded-xl">
+              <div className="w-5 h-5 rounded-full bg-baxa-orange/15 flex items-center justify-center shrink-0 mt-0.5 text-baxa-orange">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </div>
+              <div className="text-sm">
+                <span className="font-semibold text-baxa-ink">All companies already imported.</span>
+                <span className="text-black/45"> Click <span className="font-semibold text-baxa-orange">Email These Companies →</span> to open Batch Sender pre-loaded with exactly these {allExistingIds.length} companies, all pre-selected and ready to send.</span>
+              </div>
             </div>
           )}
 
