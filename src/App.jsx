@@ -8,6 +8,7 @@ import CompanyDetail from './pages/CompanyDetail'
 import BatchSender from './pages/BatchSender'
 import Settings from './pages/Settings'
 import CSVImport from './pages/CSVImport'
+import QuickDraft from './pages/QuickDraft'
 import Profile from './pages/Profile'
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="companies/:id" element={<CompanyDetail />} />
         <Route path="batch" element={<BatchSender />} />
         <Route path="import" element={<CSVImport />} />
+        <Route path="quick-draft" element={<QuickDraft />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
       </Route>
