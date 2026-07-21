@@ -77,6 +77,41 @@ export async function deleteContact(contactId) {
   if (error) throw error
 }
 
+export async function deleteCompany(id) {
+  const { error } = await supabase.from('companies').delete().eq('id', id)
+  if (error) throw error
+}
+
+/**
+ * Merge `dupId` into `keepId`:
+ * 1. Reassign all contacts from dup → keep (skip emails that already exist in keep)
+ * 2. Reassign all email_logs from dup → keep
+ * 3. Delete the dup company
+ */
+export async function mergeCompanies(keepId, dupId, keepContacts) {
+  // 1. Move contacts (only ones whose email doesn't already exist in keep)
+  const keepEmails = new Set(keepContacts.map(c => c.email.toLowerCase()))
+  const { data: dupContacts, error: fetchErr } = await supabase
+    .from('contacts').select('*').eq('company_id', dupId)
+  if (fetchErr) throw fetchErr
+
+  for (const c of dupContacts) {
+    if (keepEmails.has(c.email.toLowerCase())) {
+      // Exact duplicate email — just delete from dup
+      await supabase.from('contacts').delete().eq('id', c.id)
+    } else {
+      // Reassign to the kept company
+      await supabase.from('contacts').update({ company_id: keepId }).eq('id', c.id)
+    }
+  }
+
+  // 2. Move all email logs
+  await supabase.from('email_logs').update({ company_id: keepId }).eq('company_id', dupId)
+
+  // 3. Delete the now-empty duplicate company
+  await supabase.from('companies').delete().eq('id', dupId)
+}
+
 export async function setContactBounced(contactId, bounced) {
   const { data, error } = await supabase
     .from('contacts')

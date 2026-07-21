@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCompanies, addCompany, updateCompany } from '../lib/supabase'
 import StatusBadge, { STATUS_OPTIONS } from '../components/StatusBadge'
@@ -43,6 +43,16 @@ export default function CompanyList() {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase())
     return matchStatus && matchSearch
   })
+
+  // Detect duplicate company names for the dedupe banner
+  const dupeCount = useMemo(() => {
+    const seen = new Map()
+    for (const c of companies) {
+      const key = c.name.toLowerCase().trim()
+      seen.set(key, (seen.get(key) || 0) + 1)
+    }
+    return [...seen.values()].filter(n => n > 1).length
+  }, [companies])
 
   async function handleCompanyAdded() {
     setShowModal(false)
@@ -137,6 +147,24 @@ export default function CompanyList() {
             </Link>
           </div>
         </div>
+
+        {/* Duplicate companies banner */}
+        {dupeCount > 0 && (
+          <div className="mb-5 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl">
+            <svg className="text-amber-500 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p className="text-sm text-amber-800 flex-1">
+              <strong>{dupeCount} duplicate company name{dupeCount !== 1 ? 's' : ''} detected</strong> — probably from a re-upload.
+            </p>
+            <Link
+              to="/dedupe"
+              className="text-xs font-semibold text-amber-700 hover:text-amber-900 shrink-0 underline underline-offset-2 transition-colors"
+            >
+              Merge Duplicates →
+            </Link>
+          </div>
+        )}
 
         {/* Search / filter bar */}
         <div className="flex gap-2.5 mb-5">

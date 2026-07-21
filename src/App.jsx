@@ -10,6 +10,7 @@ import Settings from './pages/Settings'
 import CSVImport from './pages/CSVImport'
 import QuickDraft from './pages/QuickDraft'
 import EmailVerifier from './pages/EmailVerifier'
+import DedupeCompanies from './pages/DedupeCompanies'
 import Profile from './pages/Profile'
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="import" element={<CSVImport />} />
         <Route path="quick-draft" element={<QuickDraft />} />
         <Route path="verify" element={<EmailVerifier />} />
+        <Route path="dedupe" element={<DedupeCompanies />} />
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<Profile />} />
       </Route>
