@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { getCompanies, updateCompany, logDraft } from '../lib/supabase'
 import { createDraft, requestGmailAccess, isAuthenticated, getEngagementGuideBase64 } from '../lib/gmail'
-import { renderEmail, getSenderInfo } from '../lib/emailTemplate'
+import { renderEmail, renderFollowUp, getSenderInfo } from '../lib/emailTemplate'
 import StatusBadge from '../components/StatusBadge'
 import Select from '../components/Select'
 import { CompanyAvatar } from './Dashboard'
@@ -19,6 +19,7 @@ export default function BatchSender() {
   const [progress, setProgress] = useState(null)
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
+  const [runType, setRunType] = useState('initial') // 'initial' | 'followup'
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -72,21 +73,27 @@ export default function BatchSender() {
     setSelected(next)
   }
 
-  async function runBatch() {
+  async function runBatch(type = 'initial') {
     if (selected.size === 0) return
+    const isFollowUp = type === 'followup'
 
     const draftCount = companies
       .filter(c => selected.has(c.id))
-      .reduce((sum, c) => sum + c.contacts.length, 0)
+      .reduce((sum, c) => sum + c.contacts.filter(ct => !ct.bounced).length, 0)
 
     const ok = await confirm({
-      title: `Generate ${selected.size} batch${selected.size !== 1 ? 'es' : ''}?`,
-      message: `This will create ${draftCount} Gmail draft${draftCount !== 1 ? 's' : ''} — one per contact. You'll review and send them from Gmail.`,
-      confirmLabel: 'Generate Drafts',
+      title: isFollowUp
+        ? `Send ${selected.size} follow-up${selected.size !== 1 ? 's' : ''}?`
+        : `Generate ${selected.size} batch${selected.size !== 1 ? 'es' : ''}?`,
+      message: isFollowUp
+        ? `This will create ${draftCount} follow-up draft${draftCount !== 1 ? 's' : ''} — one per contact. Uses your follow-up template from Settings.`
+        : `This will create ${draftCount} Gmail draft${draftCount !== 1 ? 's' : ''} — one per contact. You'll review and send them from Gmail.`,
+      confirmLabel: isFollowUp ? 'Generate Follow-ups' : 'Generate Drafts',
     })
     if (!ok) return
 
     setRunning(true)
+    setRunType(type)
     setResults([])
     setProgress({ done: 0, total: selected.size, errors: 0 })
 
@@ -99,9 +106,10 @@ export default function BatchSender() {
     }
 
     const batch = companies.filter(c => selected.has(c.id))
-    const totalDrafts = batch.reduce((sum, c) => sum + c.contacts.length, 0)
+    const totalDrafts = batch.reduce((sum, c) => sum + c.contacts.filter(ct => !ct.bounced).length, 0)
     const { attachmentName, name: senderName } = getSenderInfo()
-    const attachmentBase64 = await getEngagementGuideBase64()
+    // Only attach the Engagement Guide on initial outreach, not follow-ups
+    const attachmentBase64 = isFollowUp ? null : await getEngagementGuideBase64()
     const newResults = []
 
     for (let i = 0; i < batch.length; i++) {
@@ -109,19 +117,26 @@ export default function BatchSender() {
       try {
         // One draft per active (non-bounced) contact
         for (const contact of c.contacts.filter(ct => !ct.bounced)) {
-          const { subject, body } = renderEmail(c.name, contact.name, contact.email)
+          const { subject, body } = isFollowUp
+            ? renderFollowUp(c.name, contact.name, contact.email)
+            : renderEmail(c.name, contact.name, contact.email)
           const { draftId, draftUrl } = await createDraft({
             toEmails: contact.email,
             subject,
             htmlBody: body,
             attachmentBase64,
-            attachmentName,
+            attachmentName: isFollowUp ? null : attachmentName,
           })
           await logDraft(c.id, { gmailDraftId: draftId, subject, sentBy: senderName, contactEmail: contact.email, contactName: contact.name })
           await sleep(300)
         }
-        await updateCompany(c.id, { status: 'draft_created', last_contacted_at: new Date().toISOString() })
-        newResults.push({ id: c.id, name: c.name, ok: true, count: c.contacts.length })
+        // Follow-ups: bump last_contacted_at but don't override status
+        if (isFollowUp) {
+          await updateCompany(c.id, { last_contacted_at: new Date().toISOString() })
+        } else {
+          await updateCompany(c.id, { status: 'draft_created', last_contacted_at: new Date().toISOString() })
+        }
+        newResults.push({ id: c.id, name: c.name, ok: true, count: c.contacts.filter(ct => !ct.bounced).length })
         setProgress(p => ({ ...p, done: i + 1 }))
       } catch (e) {
         newResults.push({ id: c.id, name: c.name, ok: false, error: e.message })
@@ -137,7 +152,7 @@ export default function BatchSender() {
     const successCount = newResults.filter(r => r.ok).length
     const errorCount = newResults.filter(r => !r.ok).length
     if (errorCount === 0) {
-      toast(`${totalDrafts} draft${totalDrafts !== 1 ? 's' : ''} created successfully`)
+      toast(`${totalDrafts} ${isFollowUp ? 'follow-up ' : ''}draft${totalDrafts !== 1 ? 's' : ''} created`)
     } else {
       toast(`${successCount} succeeded, ${errorCount} failed`, 'error')
     }
@@ -157,12 +172,20 @@ export default function BatchSender() {
           </div>
           <div className="mt-1">
             {selected.size > 0 && !running && (
-              <button className="btn-orange" onClick={runBatch}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-                Generate {selected.size} Draft{selected.size !== 1 ? 's' : ''}
-              </button>
+              <div className="flex gap-2">
+                <button className="btn-secondary" onClick={() => runBatch('followup')}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+                  </svg>
+                  Follow-up ({selected.size})
+                </button>
+                <button className="btn-orange" onClick={() => runBatch('initial')}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                  Generate {selected.size} Draft{selected.size !== 1 ? 's' : ''}
+                </button>
+              </div>
             )}
             {running && (
               <div className="flex items-center gap-2 text-sm text-black/40 font-medium">
@@ -200,7 +223,7 @@ export default function BatchSender() {
           <div className="flex items-center justify-between mb-3">
             <div className="font-semibold text-sm text-baxa-ink">
               {running
-                ? `Creating drafts… ${progress.done} of ${progress.total}`
+                ? `${runType === 'followup' ? 'Creating follow-ups' : 'Creating drafts'}… ${progress.done} of ${progress.total}`
                 : `Done — ${successCount} created${errorCount > 0 ? `, ${errorCount} failed` : ''}`}
             </div>
             {!running && (
